@@ -8,9 +8,9 @@ import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email
 
 // Generate JWT Token
 const generateToken = (userId: string): string => {
-  return jwt.sign({ userId }, env.JWT_SECRET, {
+  return jwt.sign({ userId }, env.JWT_SECRET as jwt.Secret, {
     expiresIn: env.JWT_EXPIRE,
-  });
+  } as jwt.SignOptions);
 };
 
 // Register

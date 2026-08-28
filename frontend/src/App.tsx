@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useAppSelector } from './hooks/useAuth';
+import { useEffect } from 'react';
+import { useAppSelector, useAppDispatch } from './hooks/useAuth';
+import { getCurrentUser } from './features/auth/authSlice';
 import Navbar from './components/layout/Navbar';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import LandingPage from './pages/LandingPage';
@@ -15,10 +17,18 @@ import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminInventoryPage from './pages/admin/AdminInventoryPage';
 
 function App() {
-  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+  const { isAuthenticated, user, token } = useAppSelector((state) => state.auth);
   const location = useLocation();
   const showFooter = !['/login', '/register', '/forgot-password'].includes(location.pathname)
     && !location.pathname.startsWith('/reset-password');
+
+  // On mount: validate session & refresh user data from server
+  useEffect(() => {
+    if (token) {
+      dispatch(getCurrentUser());
+    }
+  }, [dispatch, token]);
 
   return (
     <div className="flex min-h-screen flex-col bg-brand-bg">

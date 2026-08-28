@@ -1,15 +1,15 @@
 import { Request, Response } from 'express';
 import Order from '../models/Order';
 import Inventory from '../models/Inventory';
-import { createRazorpayOrder, verifyRazorpayPayment } from '../services/payment.service';
+import { createRazorpayOrder as createRzpOrder, verifyRazorpayPayment } from '../services/payment.service';
 import { emitOrderUpdate } from '../sockets/order.socket';
 
 // Create Razorpay Order
-export const createRazorpayOrder = async (req: Request, res: Response): Promise<void> => {
+export const createOrder = async (req: Request, res: Response): Promise<void> => {
   try {
     const { items, totalPrice } = req.body;
 
-    const razorpayOrder = await createRazorpayOrder(totalPrice);
+    const razorpayOrder = await createRzpOrder(totalPrice);
 
     res.status(200).json({
       orderId: razorpayOrder.id,
@@ -54,7 +54,7 @@ export const verifyPayment = async (req: Request, res: Response): Promise<void> 
     });
 
     // Emit socket event
-    emitOrderUpdate(req.userId.toString(), order);
+    emitOrderUpdate(req.userId!.toString(), order);
 
     res.status(201).json({
       message: 'Order created successfully',

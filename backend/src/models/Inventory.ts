@@ -5,6 +5,8 @@ export interface IInventory extends Document {
   category: 'base' | 'sauce' | 'cheese' | 'vegetable';
   quantity: number;
   threshold: number;
+  price: number;
+  imageUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,6 +33,15 @@ const inventorySchema = new Schema<IInventory>(
       type: Number,
       required: true,
       default: 10,
+    },
+    price: {
+      type: Number,
+      required: [true, 'Please provide a price'],
+      default: 0,
+    },
+    imageUrl: {
+      type: String,
+      default: '',
     },
   },
   {

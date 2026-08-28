@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  createRazorpayOrder,
+  createOrder,
   verifyPayment,
   getMyOrders,
   getOrderById,
@@ -11,7 +11,7 @@ import { authenticate, requireAdmin } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-router.post('/create-razorpay-order', authenticate, createRazorpayOrder);
+router.post('/create-razorpay-order', authenticate, createOrder);
 router.post('/verify-payment', authenticate, verifyPayment);
 router.get('/my-orders', authenticate, getMyOrders);
 router.get('/:id', authenticate, getOrderById);

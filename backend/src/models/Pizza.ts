@@ -4,6 +4,7 @@ export interface IPizzaOption {
   name: string;
   price: number;
   inStock: boolean;
+  imageUrl?: string;
 }
 
 export interface IPizza extends Document {
@@ -22,27 +23,31 @@ const pizzaSchema = new Schema<IPizza>(
         name: { type: String, required: true },
         price: { type: Number, required: true },
         inStock: { type: Boolean, default: true },
+        imageUrl: { type: String, default: '' },
       },
     ],
-    sauces: [
+     sauces: [
       {
         name: { type: String, required: true },
         price: { type: Number, required: true },
         inStock: { type: Boolean, default: true },
+        imageUrl: { type: String, default: '' },
       },
     ],
-    cheeses: [
+     cheeses: [
       {
         name: { type: String, required: true },
         price: { type: Number, required: true },
         inStock: { type: Boolean, default: true },
+        imageUrl: { type: String, default: '' },
       },
     ],
-    vegetables: [
+     vegetables: [
       {
         name: { type: String, required: true },
         price: { type: Number, required: true },
         inStock: { type: Boolean, default: true },
+        imageUrl: { type: String, default: '' },
       },
     ],
   },

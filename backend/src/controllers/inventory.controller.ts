@@ -16,7 +16,7 @@ export const getAllInventory = async (req: Request, res: Response): Promise<void
 export const updateInventory = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { quantity, threshold } = req.body;
+    const { quantity, threshold, imageUrl, price } = req.body;
 
     const inventory = await Inventory.findById(id);
     if (!inventory) {
@@ -26,6 +26,8 @@ export const updateInventory = async (req: Request, res: Response): Promise<void
 
     if (quantity !== undefined) inventory.quantity = quantity;
     if (threshold !== undefined) inventory.threshold = threshold;
+    if (imageUrl !== undefined) inventory.imageUrl = imageUrl;
+    if (price !== undefined) inventory.price = price;
 
     await inventory.save();
 
@@ -39,13 +41,15 @@ export const updateInventory = async (req: Request, res: Response): Promise<void
 // Create Inventory Item (Admin)
 export const createInventory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { item, category, quantity, threshold } = req.body;
+    const { item, category, quantity, threshold, imageUrl, price } = req.body;
 
     const inventory = await Inventory.create({
       item,
       category,
       quantity,
       threshold,
+      price: price || 0,
+      imageUrl: imageUrl || '',
     });
 
     res.status(201).json(inventory);

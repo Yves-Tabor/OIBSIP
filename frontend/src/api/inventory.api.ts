@@ -10,12 +10,14 @@ export const inventoryApi = {
     category: 'base' | 'sauce' | 'cheese' | 'vegetable';
     quantity: number;
     threshold: number;
+    price: number;
+    imageUrl?: string;
   }): Promise<{ data: InventoryItem }> =>
     api.post('/inventory', data),
   
   updateInventory: (
     id: string,
-    data: { quantity?: number; threshold?: number }
+    data: { quantity?: number; threshold?: number; price?: number; imageUrl?: string }
   ): Promise<{ data: InventoryItem }> =>
     api.patch(`/inventory/${id}`, data),
   

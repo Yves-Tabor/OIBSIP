@@ -1,18 +1,59 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks/useAuth';
 import { pizzaApi } from '../api/pizza.api';
-import { setStep, clearCart } from '../features/cart/cartSlice';
+import {
+  setStep,
+  setBase,
+  setSauce,
+  setCheese,
+  addVegetable,
+  removeVegetable,
+  clearCart,
+  selectCartTotal,
+} from '../features/cart/cartSlice';
+import { PizzaOption, PizzaOptions } from '../types';
+import { Sparkles, ShoppingBag, ArrowRight, ArrowLeft, RefreshCw, Check } from 'lucide-react';
+
+const PLACEHOLDER = 'https://placehold.co/400x300/FDE8D4/6B3520?text=Ingredient';
 
 const PizzaBuilderPage = () => {
   const dispatch = useAppDispatch();
   const { base, sauce, cheese, vegetables, currentStep } = useAppSelector((state) => state.cart);
+  const total = useAppSelector(selectCartTotal);
+
+  const [options, setOptions] = useState<PizzaOptions | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Refs for auto-centering active step on mobile
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    // Load pizza options on mount
-    pizzaApi.getPizzaOptions().then((response) => {
-      console.log('Pizza options:', response.data);
-    });
+    setLoading(true);
+    pizzaApi
+      .getPizzaOptions()
+      .then((response) => {
+        setOptions(response.data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
   }, [dispatch]);
+
+  // Scroll active step into center on mobile
+  useEffect(() => {
+    const container = scrollRef.current;
+    const activeStep = stepRefs.current[currentStep];
+    if (!container || !activeStep) return;
+
+    const containerWidth = container.offsetWidth;
+    const stepLeft = activeStep.offsetLeft;
+    const stepWidth = activeStep.offsetWidth;
+    const scrollTarget = stepLeft - containerWidth / 2 + stepWidth / 2;
+
+    container.scrollTo({ left: scrollTarget, behavior: 'smooth' });
+  }, [currentStep]);
 
   const steps = [
     { title: 'Choose Base', description: 'Select your pizza crust' },
@@ -21,66 +62,312 @@ const PizzaBuilderPage = () => {
     { title: 'Add Toppings', description: 'Select your vegetables' },
   ];
 
+  const handleOptionSelect = (option: PizzaOption) => {
+    if (!option.inStock) return;
+    
+    if (currentStep === 0) dispatch(setBase(option));
+    else if (currentStep === 1) dispatch(setSauce(option));
+    else if (currentStep === 2) dispatch(setCheese(option));
+  };
+
+  const handleToppingToggle = (option: PizzaOption) => {
+    if (!option.inStock) return;
+    
+    const isSelected = vegetables.some((v) => v.name === option.name);
+    if (isSelected) {
+      dispatch(removeVegetable(option.name));
+    } else {
+      dispatch(addVegetable(option));
+    }
+  };
+
+  const getStepOptions = (): PizzaOption[] => {
+    if (!options) return [];
+    if (currentStep === 0) return options.bases;
+    if (currentStep === 1) return options.sauces;
+    if (currentStep === 2) return options.cheeses;
+    return options.vegetables;
+  };
+
+  const isOptionSelected = (option: PizzaOption): boolean => {
+    if (currentStep === 0) return base?.name === option.name;
+    if (currentStep === 1) return sauce?.name === option.name;
+    if (currentStep === 2) return cheese?.name === option.name;
+    return vegetables.some((v) => v.name === option.name);
+  };
+
+  const isCurrentStepValid = (): boolean => {
+    if (currentStep === 0) return !!base;
+    if (currentStep === 1) return !!sauce;
+    if (currentStep === 2) return !!cheese;
+    return true; // Toppings are optional
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 animate-fade-in">
-      <h1 className="font-heading text-3xl font-bold text-brand-choco-dark mb-8">
-        Build Your Pizza
-      </h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="font-heading text-3xl font-bold text-brand-choco-dark flex items-center gap-2">
+            <Sparkles className="text-brand-orange" />
+            Build Your Custom Pizza
+          </h1>
+          <p className="text-brand-text-secondary text-sm mt-1">
+            Pick your ingredients fresh from the store to design your culinary masterpiece.
+          </p>
+        </div>
+        <button
+          onClick={() => dispatch(clearCart())}
+          className="self-start text-xs font-semibold text-brand-choco hover:text-brand-orange transition-colors flex items-center gap-1 bg-brand-surface border border-brand-border px-3 py-1.5 rounded-sm"
+        >
+          <RefreshCw size={12} />
+          Reset Build
+        </button>
+      </div>
 
-      {/* Progress Steps */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          {steps.map((step, index) => (
-            <div key={index} className="flex-1 flex items-center">
+      {/* Progress Steps — hidden scrollbar, auto-centered */}
+      <div className="mb-8 bg-brand-surface-elevated border border-brand-border rounded-lg p-4 shadow-sm">
+        <div
+          ref={scrollRef}
+          className="overflow-x-auto md:overflow-visible [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        >
+          <div className="flex items-center min-w-max md:min-w-0 md:justify-between">
+            {steps.map((step, index) => (
               <div
-                className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                  index <= currentStep
-                    ? 'border-brand-orange bg-brand-orange text-white'
-                    : 'border-brand-border text-brand-text-muted'
-                }`}
+                key={index}
+                ref={(el) => { stepRefs.current[index] = el; }}
+                className="flex items-center shrink-0 md:flex-1"
               >
-                {index + 1}
+                {/* Step circle + label */}
+                <button
+                  onClick={() => dispatch(setStep(index))}
+                  className="flex items-center text-left focus:outline-none"
+                >
+                  <div
+                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+                      index === currentStep
+                        ? 'border-brand-orange bg-brand-orange text-white shadow-md shadow-brand-orange/30 scale-105'
+                        : index < currentStep
+                        ? 'border-brand-choco bg-brand-choco text-white'
+                        : 'border-brand-border bg-brand-surface text-brand-text-muted'
+                    }`}
+                  >
+                    {index < currentStep ? (
+                      <Check size={18} strokeWidth={2.5} />
+                    ) : (
+                      <span className="text-sm font-bold">{index + 1}</span>
+                    )}
+                  </div>
+                  <div className="ml-3 whitespace-nowrap mr-4">
+                    <p className={`text-sm font-semibold ${index <= currentStep ? 'text-brand-choco-dark' : 'text-brand-text-muted'}`}>
+                      {step.title}
+                    </p>
+                    <p className="text-xs text-brand-text-muted">{step.description}</p>
+                  </div>
+                </button>
+
+                {/* Connector line between steps */}
+                {index < steps.length - 1 && (
+                  <div
+                    className="w-10 md:flex-1 h-0.5 mx-2 shrink-0 transition-colors duration-300"
+                    style={{ background: index < currentStep ? '#6B3520' : '#E8E2D9' }}
+                  />
+                )}
               </div>
-              <div className="ml-3">
-                <p className={`font-medium ${index <= currentStep ? 'text-brand-choco-dark' : 'text-brand-text-muted'}`}>
-                  {step.title}
-                </p>
-                <p className="text-xs text-brand-text-muted">{step.description}</p>
-              </div>
-              {index < steps.length - 1 && (
-                <div className="flex-1 h-px bg-brand-border mx-4" />
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Pizza Builder Content */}
-      <div className="bg-brand-surface border border-brand-border rounded-md p-8">
-        <p className="text-brand-text-secondary text-center py-12">
-          Pizza builder content will be implemented here.
-          <br />
-          Current step: {currentStep}
-        </p>
-      </div>
+      {/* Main Grid: Card Ingredients selection + Order details Sidebar */}
+      {loading ? (
+        <div className="text-center py-20 bg-brand-surface rounded-lg border border-brand-border">
+          <div className="animate-pulse-soft text-brand-text-muted">Loading fresh ingredients...</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Ingredients list cards (Left Column) */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-brand-surface-elevated border border-brand-border rounded-lg p-6 shadow-sm">
+              <h2 className="font-heading text-xl font-bold text-brand-choco-dark mb-6 border-b border-brand-border pb-3">
+                {steps[currentStep].title} options
+              </h2>
 
-      {/* Navigation Buttons */}
-      <div className="flex justify-between mt-6">
-        <button
-          onClick={() => dispatch(setStep(Math.max(currentStep - 1, 0)))}
-          disabled={currentStep === 0}
-          className="border border-brand-choco text-brand-choco px-5 py-2.5 rounded-sm text-sm font-medium hover:bg-brand-cream transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Previous
-        </button>
-        <button
-          onClick={() => dispatch(setStep(Math.min(currentStep + 1, 3)))}
-          disabled={currentStep === 3}
-          className="bg-brand-orange text-white px-5 py-2.5 rounded-sm text-sm font-medium hover:bg-brand-orange-light transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
-      </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {getStepOptions().map((option) => {
+                  const selected = isOptionSelected(option);
+                  const isToppingStep = currentStep === 3;
+
+                  return (
+                    <div
+                      key={option.name}
+                      onClick={() =>
+                        isToppingStep ? handleToppingToggle(option) : handleOptionSelect(option)
+                      }
+                      className={`relative rounded-lg overflow-hidden border bg-white shadow-sm cursor-pointer transition-all duration-300 flex flex-col group ${
+                        !option.inStock
+                          ? 'opacity-60 cursor-not-allowed border-brand-border'
+                          : selected
+                          ? 'border-brand-orange ring-2 ring-brand-orange/20 scale-[1.01]'
+                          : 'border-brand-border hover:border-brand-orange-light hover:shadow-md'
+                      }`}
+                    >
+                      {/* Image header with pricing tag */}
+                      <div className="relative h-44 w-full bg-brand-orange-pale/30 overflow-hidden shrink-0">
+                        <img
+                          src={option.imageUrl || PLACEHOLDER}
+                          alt={option.name}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = PLACEHOLDER;
+                          }}
+                        />
+                        
+                        {/* Price Badge */}
+                        <div className="absolute top-3 right-3 bg-brand-choco-dark/85 backdrop-blur-sm text-white px-2.5 py-1 rounded text-xs font-bold tracking-wide">
+                          +${option.price.toFixed(2)}
+                        </div>
+
+                        {/* Out of Stock Overlay */}
+                        {!option.inStock && (
+                          <div className="absolute inset-0 bg-brand-choco-dark/70 backdrop-blur-[1px] flex items-center justify-center">
+                            <span className="text-white text-xs font-bold uppercase tracking-wider bg-red-600 px-3 py-1 rounded-sm">
+                              Out of Stock
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Selection Checkmark Overlay */}
+                        {selected && option.inStock && (
+                          <div className="absolute top-3 left-3 bg-brand-orange text-white w-7 h-7 rounded-full flex items-center justify-center shadow-lg border-2 border-white animate-scale-in">
+                            <Check size={16} strokeWidth={3} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Info body */}
+                      <div className="p-4 flex-1 flex flex-col justify-between">
+                        <div>
+                          <h3 className="font-heading text-base font-bold text-brand-choco-dark">
+                            {option.name}
+                          </h3>
+                          <p className="text-xs text-brand-text-muted mt-0.5">
+                            {option.inStock ? 'Fresh & in-store' : 'Currently unavailable'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Navigation buttons */}
+            <div className="flex justify-between items-center pt-2">
+              <button
+                onClick={() => dispatch(setStep(Math.max(currentStep - 1, 0)))}
+                disabled={currentStep === 0}
+                className="border border-brand-choco text-brand-choco px-6 py-2.5 rounded-sm text-sm font-semibold hover:bg-brand-surface transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+              >
+                <ArrowLeft size={16} />
+                Previous
+              </button>
+
+              {currentStep < 3 ? (
+                <button
+                  onClick={() => dispatch(setStep(currentStep + 1))}
+                  disabled={!isCurrentStepValid()}
+                  className="bg-brand-orange text-white px-6 py-2.5 rounded-sm text-sm font-semibold hover:bg-brand-orange-light transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  Next Step
+                  <ArrowRight size={16} />
+                </button>
+              ) : (
+                <button
+                  disabled={!isCurrentStepValid()}
+                  className="bg-brand-choco text-white px-6 py-2.5 rounded-sm text-sm font-semibold hover:bg-brand-choco-mid transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-md shadow-brand-choco/20"
+                >
+                  <ShoppingBag size={16} />
+                  Add to Cart
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Builder summary details (Right Column) */}
+          <div className="space-y-6">
+            <div className="bg-brand-surface-elevated border border-brand-border rounded-lg p-6 shadow-sm sticky top-24">
+              <h2 className="font-heading text-lg font-bold text-brand-choco-dark mb-4 border-b border-brand-border pb-3 flex items-center gap-2">
+                <ShoppingBag className="text-brand-orange" size={20} />
+                Your Pizza Summary
+              </h2>
+
+              <div className="space-y-4 mb-6">
+                {/* Base */}
+                <div className="flex justify-between items-start text-sm">
+                  <div>
+                    <p className="font-semibold text-brand-text-primary">Base Crust</p>
+                    <p className="text-xs text-brand-text-muted">{base ? base.name : 'Not selected'}</p>
+                  </div>
+                  <span className="font-mono text-brand-choco-dark font-medium">
+                    {base ? `$${base.price.toFixed(2)}` : '--'}
+                  </span>
+                </div>
+
+                {/* Sauce */}
+                <div className="flex justify-between items-start text-sm">
+                  <div>
+                    <p className="font-semibold text-brand-text-primary">Sauce</p>
+                    <p className="text-xs text-brand-text-muted">{sauce ? sauce.name : 'Not selected'}</p>
+                  </div>
+                  <span className="font-mono text-brand-choco-dark font-medium">
+                    {sauce ? `$${sauce.price.toFixed(2)}` : '--'}
+                  </span>
+                </div>
+
+                {/* Cheese */}
+                <div className="flex justify-between items-start text-sm">
+                  <div>
+                    <p className="font-semibold text-brand-text-primary">Cheese</p>
+                    <p className="text-xs text-brand-text-muted">{cheese ? cheese.name : 'Not selected'}</p>
+                  </div>
+                  <span className="font-mono text-brand-choco-dark font-medium">
+                    {cheese ? `$${cheese.price.toFixed(2)}` : '--'}
+                  </span>
+                </div>
+
+                {/* Toppings (Vegetables) */}
+                <div className="flex justify-between items-start text-sm">
+                  <div>
+                    <p className="font-semibold text-brand-text-primary">Toppings</p>
+                    <p className="text-xs text-brand-text-muted">
+                      {vegetables.length > 0
+                        ? vegetables.map((v) => v.name).join(', ')
+                        : 'No toppings selected'}
+                    </p>
+                  </div>
+                  <span className="font-mono text-brand-choco-dark font-medium">
+                    {vegetables.length > 0
+                      ? `$${vegetables.reduce((sum, v) => sum + v.price, 0).toFixed(2)}`
+                      : '--'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Total Summary Footer */}
+              <div className="border-t-2 border-dashed border-brand-border pt-4 flex justify-between items-center mb-6">
+                <span className="font-heading text-lg font-bold text-brand-choco-dark">Total Price</span>
+                <span className="font-mono text-2xl font-black text-brand-orange">${total.toFixed(2)}</span>
+              </div>
+
+              <div className="text-xs text-brand-text-muted leading-relaxed bg-brand-surface rounded p-3 border border-brand-border/60">
+                💡 Fill in all base selections (Crust, Sauce, and Cheese) to unlock checkout and add your customized pizza to order items.
+              </div>
+            </div>
+          </div>
+
+        </div>
+      )}
     </div>
   );
 };

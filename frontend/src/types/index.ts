@@ -10,6 +10,7 @@ export interface PizzaOption {
   name: string;
   price: number;
   inStock: boolean;
+  imageUrl?: string;
 }
 
 export interface PizzaOptions {
@@ -44,6 +45,8 @@ export interface InventoryItem {
   category: 'base' | 'sauce' | 'cheese' | 'vegetable';
   quantity: number;
   threshold: number;
+  price: number;
+  imageUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

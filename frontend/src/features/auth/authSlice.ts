@@ -2,8 +2,12 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { User, AuthState } from '../../types';
 import { authApi } from '../../api/auth.api';
 
+// Try to hydrate user from localStorage for instant display
+const storedUser = localStorage.getItem('user');
+const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+
 const initialState: AuthState = {
-  user: null,
+  user: parsedUser,
   token: localStorage.getItem('token'),
   isAuthenticated: !!localStorage.getItem('token'),
   isLoading: false,
@@ -134,10 +138,15 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = action.payload;
         state.isAuthenticated = true;
+        localStorage.setItem('user', JSON.stringify(action.payload));
       })
       .addCase(getCurrentUser.rejected, (state) => {
         state.isLoading = false;
+        state.user = null;
+        state.token = null;
         state.isAuthenticated = false;
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       })
       // Logout
       .addCase(logout.fulfilled, (state) => {
