@@ -1,19 +1,40 @@
 # DailyPizza
 
-A pizza delivery app with Express/TypeScript/MongoDB backend and React/Redux Toolkit frontend.
+A full-featured pizza delivery application with Express/TypeScript/MongoDB backend and React/Redux Toolkit frontend.
 
-## What it does
+## Features
 
-- User signup with email verification
-- Build custom pizzas (base, sauce, cheese, toppings)
-- Track orders in real-time
-- Razorpay payments
-- Admin panel for orders and inventory
-- Low stock alerts via email
+### User Side
+- **User Registration with Email Verification** - Users can register with email verification (auto-verified in development mode for testing)
+- **JWT-Based Authentication** - Secure login system with JWT tokens and authorization middleware
+- **Forgot Password Flow** - Email-based password reset with secure token links
+- **Custom Pizza Builder** - Interactive 4-step builder:
+  - Step 1: Choose pizza base (5+ options)
+  - Step 2: Choose sauce (5+ options) 
+  - Step 3: Choose cheese type (5+ options)
+  - Step 4: Select vegetables (multiple selection)
+- **Order Summary** - Real-time price calculation and order review before payment
+- **Flutterwave Payment Integration** - Secure payment processing via Flutterwave (test mode)
+- **Real-Time Order Tracking** - Live status updates from Order Received → In Kitchen → Sent to Delivery → Delivered
+- **Order History** - View all past orders with status and details
+
+### Admin Side
+- **Role-Based Access Control** - Separate admin access with middleware protection
+- **Admin Dashboard** - Central hub for managing orders, inventory, and analytics
+- **Inventory Management** - Complete stock control for:
+  - Pizza bases
+  - Sauces
+  - Cheeses
+  - Vegetables
+- **Automatic Stock Decrement** - Inventory automatically updated after each order
+- **Manual Stock Updates** - Add, edit, and delete inventory items with image support
+- **Low Stock Alerts** - Automated email notifications when items fall below threshold (via node-cron)
+- **Order Management Panel** - View all orders, update status, and manage workflow
+- **Real-Time Status Updates** - Socket.io integration for instant status reflection on user dashboards
 
 ## Tech Stack
 
-**Backend:** Node.js, Express, TypeScript, MongoDB, Mongoose, JWT, Socket.io, Nodemailer, Razorpay, node-cron, Zod
+**Backend:** Node.js, Express, TypeScript, MongoDB, Mongoose, JWT, Socket.io, Nodemailer, Flutterwave, node-cron, Zod
 
 **Frontend:** React 18, TypeScript, Redux Toolkit, React Router, Axios, Tailwind CSS, Lucide React, Socket.io-client
 
@@ -68,14 +89,14 @@ PORT=5000
 NODE_ENV=development
 MONGODB_URI=mongodb://localhost:27017/dailypizza
 JWT_SECRET=your_jwt_secret_here
-JWT_EXPIRY=7d
+JWT_EXPIRE=7d
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASSWORD=your_app_password
-EMAIL_FROM=your_email@gmail.com
-RAZORPAY_KEY_ID=your_razorpay_key_id
-RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+EMAIL_FROM=DailyPizza <noreply@dailypizza.com>
+FLUTTERWAVE_PUBLIC_KEY=FLWPUBK_TEST-your_flutterwave_public_key
+FLUTTERWAVE_SECRET_KEY=FLWSECK_TEST-your_flutterwave_secret_key
 FRONTEND_URL=http://localhost:5173
 ```
 
@@ -105,9 +126,9 @@ pnpm run dev
 
 **Auth:** POST /api/auth/register, POST /api/auth/login, GET /api/auth/verify-email/:token, POST /api/auth/forgot-password, POST /api/auth/reset-password/:token, GET /api/auth/me
 
-**Orders:** POST /api/orders/create-razorpay-order, POST /api/orders/verify-payment, GET /api/orders/my-orders, GET /api/orders/:id, GET /api/orders/admin/all, PATCH /api/orders/:id/status
+**Orders:** POST /api/orders/initialize-payment, POST /api/orders/verify-payment, GET /api/orders/my-orders, GET /api/orders/:id, GET /api/orders/admin/all, PATCH /api/orders/:id/status
 
-**Pizza:** GET /api/pizza/options, PATCH /api/pizza/options/stock
+**Pizza:** GET /api/pizza/options
 
 **Inventory:** GET /api/inventory, POST /api/inventory, PATCH /api/inventory/:id, DELETE /api/inventory/:id
 
@@ -127,10 +148,49 @@ pnpm run build
 pnpm run preview
 ```
 
+## Admin Setup
+
+To create an admin user, you need to manually set the role in the database:
+
+```bash
+# Connect to your MongoDB database
+# Find the user and update their role to 'admin'
+db.users.updateOne({ email: "admin@example.com" }, { $set: { role: "admin" } })
+```
+
+Alternatively, you can create a script to seed an admin user during development.
+
 ## Troubleshooting
 
 **MongoDB:** Make sure it's running and check MONGODB_URI in .env. For Atlas, whitelist your IP.
 
-**Email:** Use Gmail App Password (not regular password), enable 2FA.
+**Email:** Use Gmail App Password (not regular password), enable 2FA. In development mode, email verification is auto-disabled if sending fails.
 
-**Socket.io:** Check VITE_SOCKET_URL matches backend URL and CORS settings.
+**Flutterwave:** Update your Flutterwave API keys in .env with your test or production keys from the Flutterwave dashboard.
+
+**Socket.io:** Check that the frontend VITE_SOCKET_URL matches the backend URL and CORS settings are properly configured.
+
+**Environment Variables:** Ensure all required environment variables are set in both backend and frontend .env files before running the application.
+
+## Production Deployment
+
+For production deployment:
+
+1. **Backend:**
+   - Set `NODE_ENV=production` in .env
+   - Use a production MongoDB instance (MongoDB Atlas recommended)
+   - Update JWT_SECRET to a strong, random value
+   - Use production Flutterwave API keys
+   - Configure proper CORS settings for your domain
+   - Use a process manager like PM2: `pm2 start dist/main.js`
+
+2. **Frontend:**
+   - Update VITE_API_URL to your production backend URL
+   - Build the application: `pnpm run build`
+   - Deploy the dist folder to a static hosting service (Vercel, Netlify, etc.)
+
+3. **Security:**
+   - Enable HTTPS for both frontend and backend
+   - Use environment-specific configurations
+   - Implement rate limiting
+   - Set up proper logging and monitoring
