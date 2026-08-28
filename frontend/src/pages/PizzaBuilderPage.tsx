@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../hooks/useAuth';
 import { pizzaApi } from '../api/pizza.api';
+import { orderApi } from '../api/order.api';
 import {
   setStep,
   setBase,
@@ -12,17 +14,22 @@ import {
   selectCartTotal,
 } from '../features/cart/cartSlice';
 import { PizzaOption, PizzaOptions } from '../types';
-import { Sparkles, ShoppingBag, ArrowRight, ArrowLeft, RefreshCw, Check } from 'lucide-react';
+import { Sparkles, ShoppingBag, ArrowRight, ArrowLeft, RefreshCw, Check, Loader2, AlertCircle, X } from 'lucide-react';
 
 const PLACEHOLDER = 'https://placehold.co/400x300/FDE8D4/6B3520?text=Ingredient';
 
 const PizzaBuilderPage = () => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const { base, sauce, cheese, vegetables, currentStep } = useAppSelector((state) => state.cart);
   const total = useAppSelector(selectCartTotal);
 
   const [options, setOptions] = useState<PizzaOptions | null>(null);
   const [loading, setLoading] = useState(true);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Refs for auto-centering active step on mobile
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -40,6 +47,54 @@ const PizzaBuilderPage = () => {
         setLoading(false);
       });
   }, [dispatch]);
+
+  // Handle return callback from Flutterwave redirect
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const transactionId = searchParams.get('transaction_id');
+
+    if (status === 'successful' && transactionId) {
+      setCheckoutLoading(true);
+      const savedBuildStr = localStorage.getItem('pendingPizzaBuild');
+      
+      if (savedBuildStr) {
+        try {
+          const savedBuild = JSON.parse(savedBuildStr);
+          
+          orderApi.verifyPayment({
+            transactionId,
+            items: savedBuild.items,
+            totalPrice: savedBuild.totalPrice,
+          })
+          .then((res) => {
+            setCheckoutLoading(false);
+            dispatch(clearCart());
+            localStorage.removeItem('pendingPizzaBuild');
+            
+            // Redirect to tracking page
+            const orderId = res.data.order._id;
+            navigate(`/orders/${orderId}`);
+          })
+          .catch((err) => {
+            setCheckoutLoading(false);
+            setErrorMessage(err.response?.data?.message || 'Payment verification failed. Please contact customer support.');
+          });
+        } catch (e) {
+          setCheckoutLoading(false);
+          setErrorMessage('Could not load order details. Please contact customer support.');
+        }
+      } else {
+        setCheckoutLoading(false);
+        setErrorMessage('No pending pizza configuration details found.');
+      }
+      
+      // Clear URL params to avoid re-triggering on page refresh
+      setSearchParams({}, { replace: true });
+    } else if (status === 'cancelled') {
+      setErrorMessage('Payment was cancelled. You can try checkout again.');
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams, dispatch, navigate]);
 
   // Scroll active step into center on mobile
   useEffect(() => {
@@ -103,8 +158,65 @@ const PizzaBuilderPage = () => {
     return true; // Toppings are optional
   };
 
+  const handleCheckout = async () => {
+    if (!isCurrentStepValid() || !base || !sauce || !cheese) return;
+
+    try {
+      setCheckoutLoading(true);
+      setErrorMessage(null);
+
+      const pizzaItem = {
+        base: base.name,
+        sauce: sauce.name,
+        cheese: cheese.name,
+        vegetables: vegetables.map((v) => v.name),
+        quantity: 1,
+      };
+
+      const orderPayload = {
+        items: [pizzaItem],
+        totalPrice: total,
+      };
+
+      // Save custom build details to restore after payment callback
+      localStorage.setItem('pendingPizzaBuild', JSON.stringify(orderPayload));
+
+      // Fetch payment link from backend
+      const response = await orderApi.initializePayment(orderPayload);
+      
+      // Redirect to Flutterwave Secure Checkout
+      window.location.href = response.data.paymentLink;
+    } catch (err: any) {
+      setCheckoutLoading(false);
+      setErrorMessage(err.response?.data?.message || 'Failed to initialize checkout. Please try again.');
+    }
+  };
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 animate-fade-in">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 animate-fade-in relative">
+      
+      {/* Premium Loader Overlay for Redirect Verification */}
+      {checkoutLoading && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center text-white">
+          <Loader2 className="animate-spin text-brand-orange mb-4" size={48} />
+          <p className="text-lg font-semibold tracking-wide">Processing Secure Payment Callback...</p>
+          <p className="text-xs text-brand-text-placeholder mt-2">Do not refresh or close this window.</p>
+        </div>
+      )}
+
+      {/* Error alert banner */}
+      {errorMessage && (
+        <div className="mb-6 flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4 text-red-800 animate-shake relative">
+          <AlertCircle className="shrink-0 text-red-600 mt-0.5" size={18} />
+          <div className="flex-1 text-sm font-medium">
+            {errorMessage}
+          </div>
+          <button onClick={() => setErrorMessage(null)} className="text-red-500 hover:text-red-700 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="font-heading text-3xl font-bold text-brand-choco-dark flex items-center gap-2">
@@ -284,11 +396,16 @@ const PizzaBuilderPage = () => {
                 </button>
               ) : (
                 <button
-                  disabled={!isCurrentStepValid()}
+                  onClick={handleCheckout}
+                  disabled={!isCurrentStepValid() || checkoutLoading}
                   className="bg-brand-choco text-white px-6 py-2.5 rounded-sm text-sm font-semibold hover:bg-brand-choco-mid transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-md shadow-brand-choco/20"
                 >
-                  <ShoppingBag size={16} />
-                  Add to Cart
+                  {checkoutLoading ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <ShoppingBag size={16} />
+                  )}
+                  Checkout Pizza
                 </button>
               )}
             </div>

@@ -14,8 +14,8 @@ const envSchema = z.object({
   EMAIL_USER: z.string(),
   EMAIL_PASSWORD: z.string(),
   EMAIL_FROM: z.string(),
-  RAZORPAY_KEY_ID: z.string(),
-  RAZORPAY_KEY_SECRET: z.string(),
+  FLUTTERWAVE_PUBLIC_KEY: z.string(),
+  FLUTTERWAVE_SECRET_KEY: z.string(),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
 });
 

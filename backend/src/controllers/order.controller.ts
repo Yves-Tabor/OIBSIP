@@ -1,23 +1,34 @@
 import { Request, Response } from 'express';
 import Order from '../models/Order';
 import Inventory from '../models/Inventory';
-import { createRazorpayOrder as createRzpOrder, verifyRazorpayPayment } from '../services/payment.service';
+import User from '../models/User';
+import { initializeFlutterwavePayment, verifyFlutterwavePayment } from '../services/payment.service';
 import { emitOrderUpdate } from '../sockets/order.socket';
 
-// Create Razorpay Order
+// Create Flutterwave Payment Link
 export const createOrder = async (req: Request, res: Response): Promise<void> => {
   try {
     const { items, totalPrice } = req.body;
 
-    const razorpayOrder = await createRzpOrder(totalPrice);
+    const user = await User.findById(req.userId);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
 
-    res.status(200).json({
-      orderId: razorpayOrder.id,
-      amount: razorpayOrder.amount,
-      currency: razorpayOrder.currency,
+    const txRef = `order_${Date.now()}`;
+    const paymentLink = await initializeFlutterwavePayment({
+      amount: totalPrice,
+      txRef,
+      customer: {
+        email: user.email,
+        name: user.name,
+      },
     });
+
+    res.status(200).json({ paymentLink });
   } catch (error) {
-    console.error('Create Razorpay order error:', error);
+    console.error('Create payment link error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -25,12 +36,12 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
 // Verify Payment and Create Order
 export const verifyPayment = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, items, totalPrice } = req.body;
+    const { transactionId, items, totalPrice } = req.body;
 
-    // Verify payment
-    const isValid = await verifyRazorpayPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature);
-    if (!isValid) {
-      res.status(400).json({ message: 'Invalid payment signature' });
+    // Verify payment status with Flutterwave API
+    const verification = await verifyFlutterwavePayment(transactionId);
+    if (verification.status !== 'successful') {
+      res.status(400).json({ message: 'Payment verification failed' });
       return;
     }
 
@@ -49,7 +60,7 @@ export const verifyPayment = async (req: Request, res: Response): Promise<void> 
       user: req.userId,
       items,
       totalPrice,
-      paymentId: razorpayPaymentId,
+      paymentId: transactionId,
       status: 'Order Received',
     });
 
