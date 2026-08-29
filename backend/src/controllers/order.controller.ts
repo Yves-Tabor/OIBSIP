@@ -183,8 +183,8 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
     order.status = status;
     await order.save();
 
-    // Emit socket event to user
-    emitOrderUpdate(order.user.toString(), order);
+    // Emit socket event to user and admin
+    emitOrderStatusUpdate(order.user.toString(), order);
 
     res.status(200).json(order);
   } catch (error: any) {

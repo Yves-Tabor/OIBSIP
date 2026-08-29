@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
-import { useAppDispatch } from '../../hooks/useAuth';
+import { useAppDispatch, useAppSelector } from '../../hooks/useAuth';
 import { orderApi } from '../../api/order.api';
 import { updateOrderStatus } from '../../features/order/orderSlice';
+import { useSocket } from '../../hooks/useSocket';
 
 const AdminOrdersPage = () => {
   const dispatch = useAppDispatch();
+  const { userId } = useAppSelector((state) => state.auth);
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Initialize socket for admin notifications
+  useSocket(userId, true);
 
   useEffect(() => {
     loadOrders();

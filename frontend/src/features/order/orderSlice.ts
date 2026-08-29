@@ -68,6 +68,15 @@ const orderSlice = createSlice({
         state.currentOrder = action.payload;
       }
     },
+    updateOrderStatusRealtime: (state, action: PayloadAction<Order>) => {
+      const index = state.orders.findIndex((o) => o._id === action.payload._id);
+      if (index !== -1) {
+        state.orders[index] = action.payload;
+      }
+      if (state.currentOrder?._id === action.payload._id) {
+        state.currentOrder = action.payload;
+      }
+    },
     clearError: (state) => {
       state.error = null;
     },
@@ -113,5 +122,5 @@ const orderSlice = createSlice({
   },
 });
 
-export const { setCurrentOrder, updateOrderRealtime, clearError } = orderSlice.actions;
+export const { setCurrentOrder, updateOrderRealtime, updateOrderStatusRealtime, clearError } = orderSlice.actions;
 export default orderSlice.reducer;
