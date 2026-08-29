@@ -1,4 +1,5 @@
 import { env } from '../config/env';
+import { getFlutterwaveAccessToken } from './flutterwave-auth.service';
 
 interface InitializePaymentParams {
   amount: number;
@@ -9,15 +10,11 @@ interface InitializePaymentParams {
   };
 }
 
+const FLUTTERWAVE_SANDBOX_API = 'https://developersandbox-api.flutterwave.com';
+
 export const initializeFlutterwavePayment = async (params: InitializePaymentParams): Promise<string> => {
   try {
-    // Log Flutterwave secret key verification (without exposing the actual key)
-    const secretKey = env.FLUTTERWAVE_SECRET_KEY;
-    console.log('Flutterwave Secret Key Verification:', {
-      exists: !!secretKey,
-      length: secretKey?.length || 0,
-      startsWithFLWSECK_TEST: secretKey?.startsWith('FLWSECK_TEST-') || false,
-    });
+    const accessToken = await getFlutterwaveAccessToken();
 
     const payload = {
       tx_ref: params.txRef,
@@ -34,11 +31,11 @@ export const initializeFlutterwavePayment = async (params: InitializePaymentPara
       },
     };
 
-    const response = await fetch('https://api.flutterwave.com/v3/payments', {
+    const response = await fetch(`${FLUTTERWAVE_SANDBOX_API}/v3/payments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.FLUTTERWAVE_SECRET_KEY}`,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(payload),
     });
@@ -77,10 +74,12 @@ export const verifyFlutterwavePayment = async (
   transactionId: string
 ): Promise<{ status: string; amount: number; txRef: string; currency: string }> => {
   try {
-    const response = await fetch(`https://api.flutterwave.com/v3/transactions/${transactionId}/verify`, {
+    const accessToken = await getFlutterwaveAccessToken();
+
+    const response = await fetch(`${FLUTTERWAVE_SANDBOX_API}/v3/transactions/${transactionId}/verify`, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${env.FLUTTERWAVE_SECRET_KEY}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 

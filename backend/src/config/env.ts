@@ -14,8 +14,9 @@ const envSchema = z.object({
   EMAIL_USER: z.string(),
   EMAIL_PASSWORD: z.string(),
   EMAIL_FROM: z.string(),
-  FLUTTERWAVE_PUBLIC_KEY: z.string(),
-  FLUTTERWAVE_SECRET_KEY: z.string(),
+  FLW_CLIENT_ID: z.string(),
+  FLW_CLIENT_SECRET: z.string(),
+  FLW_ENCRYPTION_KEY: z.string(),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
 });
 
