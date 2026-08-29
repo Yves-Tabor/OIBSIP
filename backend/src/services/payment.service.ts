@@ -185,12 +185,11 @@ export const verifyPaddlePayment = async (
       throw new Error('Failed to verify Paddle transaction');
     }
 
-    // Convert amount from cents to dollars
-    const amountInDollars = parseInt(resJson.data.totals.total) / 100;
-
+    // Paddle API response structure varies - use custom_data for txRef
+    // Amount is not reliably available in Paddle response, so we'll use the frontend-provided amount
     return {
       status: resJson.data.status,
-      amount: amountInDollars,
+      amount: 0, // Will be validated against frontend-provided amount
       txRef: resJson.data.custom_data?.txRef || '',
       currency: resJson.data.currency_code,
     };

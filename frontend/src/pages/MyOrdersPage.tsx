@@ -1,15 +1,52 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../hooks/useAuth';
 import { getMyOrders } from '../features/order/orderSlice';
+import { orderApi } from '../api/order.api';
 
 const MyOrdersPage = () => {
   const dispatch = useAppDispatch();
   const { orders, isLoading } = useAppSelector((state) => state.order);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    dispatch(getMyOrders());
-  }, [dispatch]);
+    // Check if user was redirected from Paddle payment success
+    const status = searchParams.get('status');
+    const transactionId = searchParams.get('transaction_id');
+    
+    if (status === 'completed' && transactionId) {
+      // Verify payment and create order
+      const savedBuildStr = localStorage.getItem('pendingPizzaBuild');
+      if (savedBuildStr) {
+        try {
+          const savedBuild = JSON.parse(savedBuildStr);
+          orderApi.verifyPayment({
+            transactionId: savedBuild.transactionId,
+            txRef: savedBuild.txRef,
+            items: savedBuild.items,
+            totalPrice: savedBuild.totalPrice,
+          })
+          .then(() => {
+            localStorage.removeItem('pendingPizzaBuild');
+            dispatch(getMyOrders());
+            // Clear URL params
+            window.history.replaceState({}, '', '/orders');
+          })
+          .catch((err) => {
+            console.error('Payment verification failed:', err);
+            dispatch(getMyOrders());
+          });
+        } catch (e) {
+          console.error('Error parsing saved build:', e);
+          dispatch(getMyOrders());
+        }
+      } else {
+        dispatch(getMyOrders());
+      }
+    } else {
+      dispatch(getMyOrders());
+    }
+  }, [dispatch, searchParams]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

@@ -155,8 +155,10 @@ const PizzaBuilderPage = () => {
     };
 
     if (window.Paddle && window.Paddle.Event) {
-      window.Paddle.Event.addListener('checkoutComplete', handleCheckoutComplete);
-      window.Paddle.Event.addListener('checkoutClosed', handleCheckoutClose);
+      // Paddle.js v2 uses different event names
+      window.Paddle.Event.addListener('checkout.completed', handleCheckoutComplete);
+      window.Paddle.Event.addListener('checkout.closed', handleCheckoutClose);
+      console.log('Paddle event listeners registered');
     }
 
     return () => {
@@ -316,6 +318,7 @@ const PizzaBuilderPage = () => {
             displayMode: 'overlay',
             theme: 'light',
             variant: 'multi-page',
+            successUrl: `${window.location.origin}/orders?status=completed&transaction_id=${response.data.transactionId}`,
           },
         });
         setCheckoutLoading(false);
