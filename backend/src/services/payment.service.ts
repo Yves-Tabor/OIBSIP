@@ -1,5 +1,4 @@
 import { env } from '../config/env';
-import { getFlutterwaveAccessToken } from './flutterwave-auth.service';
 
 interface InitializePaymentParams {
   amount: number;
@@ -8,116 +7,195 @@ interface InitializePaymentParams {
     email: string;
     name: string;
   };
+  items: any[];
+  userId: string;
 }
 
-const FLUTTERWAVE_SANDBOX_API = 'https://developersandbox-api.flutterwave.com';
+const PADDLE_SANDBOX_API = 'https://sandbox-api.paddle.com';
+const PADDLE_PRODUCTION_API = 'https://api.paddle.com';
 
-export const initializeFlutterwavePayment = async (params: InitializePaymentParams): Promise<string> => {
+const getPaddleApiKey = (): string => {
+  return env.PADDLE_ENVIRONMENT === 'sandbox' 
+    ? env.PADDLE_SANDBOX_API_KEY 
+    : env.PADDLE_PRODUCTION_API_KEY || '';
+};
+
+const getPaddleApiUrl = (): string => {
+  return env.PADDLE_ENVIRONMENT === 'sandbox' 
+    ? PADDLE_SANDBOX_API 
+    : PADDLE_PRODUCTION_API;
+};
+
+export const initializePaddlePayment = async (params: InitializePaymentParams): Promise<{ transactionId: string }> => {
   try {
-    const accessToken = await getFlutterwaveAccessToken();
+    const apiKey = getPaddleApiKey();
+    const apiUrl = getPaddleApiUrl();
 
-    const payload = {
-      tx_ref: params.txRef,
-      amount: params.amount,
-      currency: 'USD',
-      redirect_url: `${env.FRONTEND_URL}/menu`,
+    // Convert amount to cents (Paddle uses smallest denomination)
+    const amountInCents = Math.round(params.amount * 100);
+
+    // Create transaction with non-catalog item for dynamic pricing
+    const transactionPayload = {
+      items: [
+        {
+          quantity: 1,
+          price: {
+            description: 'Custom Pizza Order',
+            name: 'Custom Pizza',
+            billing_cycle: null, // One-time purchase
+            tax_mode: 'account_setting',
+            unit_price: {
+              amount: amountInCents.toString(),
+              currency_code: 'USD',
+            },
+            product: {
+              name: 'DailyPizza Custom Order',
+              description: 'Custom-built pizza order',
+              tax_category: 'standard',
+            },
+          },
+        },
+      ],
       customer: {
         email: params.customer.email,
         name: params.customer.name,
       },
-      customizations: {
-        title: 'DailyPizza Payment',
-        description: 'Secure payment for custom pizza order',
+      custom_data: {
+        txRef: params.txRef,
+        items: params.items,
+        totalPrice: params.amount,
+        userId: params.userId,
       },
     };
 
-    const response = await fetch(`${FLUTTERWAVE_SANDBOX_API}/v3/payments`, {
+    const endpoint = `${apiUrl}/transactions`;
+    console.log('Paddle Transaction Create Request:', {
+      endpoint,
+      method: 'POST',
+      environment: env.PADDLE_ENVIRONMENT,
+      payload: JSON.stringify(transactionPayload, null, 2),
+    });
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(transactionPayload),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Flutterwave API Error:', {
+      console.error('Paddle Transaction API Error:', {
         status: response.status,
         statusText: response.statusText,
-        errorData,
+        errorData: JSON.stringify(errorData, null, 2),
       });
-      throw new Error(`Flutterwave API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+      throw new Error(`Paddle API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
     }
 
     const resJson = await response.json() as {
-      status: string;
-      message: string;
       data: {
-        link: string;
+        id: string;
+        status: string;
+        currency_code: string;
+        totals: {
+          total: string;
+        };
       };
     };
 
-    if (resJson.status !== 'success' || !resJson.data?.link) {
-      console.error('Flutterwave initialization failed:', resJson);
-      throw new Error(resJson.message || 'Failed to initialize payment link');
+    console.log('Paddle Transaction Response:', {
+      transactionId: resJson.data?.id,
+      status: resJson.data?.status,
+      currency: resJson.data?.currency_code,
+      total: resJson.data?.totals?.total,
+    });
+
+    if (!resJson.data || !resJson.data.id) {
+      console.error('Paddle transaction creation failed:', resJson);
+      throw new Error('Failed to create Paddle transaction');
     }
 
-    return resJson.data.link;
+    return {
+      transactionId: resJson.data.id,
+    };
   } catch (error) {
-    console.error('initializeFlutterwavePayment error:', error);
+    console.error('initializePaddlePayment error:', error);
     throw error;
   }
 };
 
-export const verifyFlutterwavePayment = async (
+export const verifyPaddlePayment = async (
   transactionId: string
 ): Promise<{ status: string; amount: number; txRef: string; currency: string }> => {
   try {
-    const accessToken = await getFlutterwaveAccessToken();
+    const apiKey = getPaddleApiKey();
+    const apiUrl = getPaddleApiUrl();
 
-    const response = await fetch(`${FLUTTERWAVE_SANDBOX_API}/v3/transactions/${transactionId}/verify`, {
+    const endpoint = `${apiUrl}/transactions/${transactionId}`;
+    console.log('Paddle Transaction Verification Request:', {
+      endpoint,
+      method: 'GET',
+      transactionId,
+    });
+
+    const response = await fetch(endpoint, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Flutterwave Verification API Error:', {
+      console.error('Paddle Transaction Verification API Error:', {
         status: response.status,
         statusText: response.statusText,
-        errorData,
+        errorData: JSON.stringify(errorData, null, 2),
       });
-      throw new Error(`Flutterwave verification error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+      throw new Error(`Paddle verification error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
     }
 
     const resJson = await response.json() as {
-      status: string;
-      message: string;
       data: {
-        id: number;
+        id: string;
         status: string;
-        amount: number;
-        tx_ref: string;
-        currency: string;
+        currency_code: string;
+        totals: {
+          total: string;
+        };
+        custom_data: {
+          txRef: string;
+        };
       };
     };
 
-    if (resJson.status !== 'success' || !resJson.data) {
-      console.error('Flutterwave verification failed:', resJson);
-      throw new Error(resJson.message || 'Failed to verify transaction');
+    console.log('Paddle Transaction Verification Response:', {
+      transactionId: resJson.data?.id,
+      status: resJson.data?.status,
+      currency: resJson.data?.currency_code,
+      total: resJson.data?.totals?.total,
+      txRef: resJson.data?.custom_data?.txRef,
+    });
+
+    if (!resJson.data || !resJson.data.id) {
+      console.error('Paddle transaction verification failed:', resJson);
+      throw new Error('Failed to verify Paddle transaction');
     }
+
+    // Convert amount from cents to dollars
+    const amountInDollars = parseInt(resJson.data.totals.total) / 100;
 
     return {
       status: resJson.data.status,
-      amount: resJson.data.amount,
-      txRef: resJson.data.tx_ref,
-      currency: resJson.data.currency,
+      amount: amountInDollars,
+      txRef: resJson.data.custom_data?.txRef || '',
+      currency: resJson.data.currency_code,
     };
   } catch (error) {
-    console.error('verifyFlutterwavePayment error:', error);
+    console.error('verifyPaddlePayment error:', error);
     throw error;
   }
 };

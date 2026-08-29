@@ -2,10 +2,10 @@ import { Request, Response } from 'express';
 import Order from '../models/Order';
 import Inventory from '../models/Inventory';
 import User from '../models/User';
-import { initializeFlutterwavePayment, verifyFlutterwavePayment } from '../services/payment.service';
+import { initializePaddlePayment, verifyPaddlePayment } from '../services/payment.service';
 import { emitOrderUpdate } from '../sockets/order.socket';
 
-// Create Flutterwave Payment Link
+// Create Paddle Transaction
 export const createOrder = async (req: Request, res: Response): Promise<void> => {
   try {
     const { items, totalPrice } = req.body;
@@ -16,19 +16,21 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const txRef = `order_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const paymentLink = await initializeFlutterwavePayment({
+    const txRef = `order${Date.now()}${Math.random().toString(36).substring(7)}`;
+    const { transactionId } = await initializePaddlePayment({
       amount: totalPrice,
       txRef,
       customer: {
         email: user.email,
         name: user.name,
       },
+      items,
+      userId: req.userId!.toString(),
     });
 
-    res.status(200).json({ paymentLink, txRef });
+    res.status(200).json({ txRef, transactionId });
   } catch (error: any) {
-    console.error('Create payment link error:', error);
+    console.error('Create payment transaction error:', error);
     res.status(500).json({ message: error.message || 'Failed to initialize payment' });
   }
 };
@@ -50,13 +52,13 @@ export const verifyPayment = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Verify payment status with Flutterwave API
-    const verification = await verifyFlutterwavePayment(transactionId);
+    // Verify payment status with Paddle API
+    const verification = await verifyPaddlePayment(transactionId);
     
     // Comprehensive verification checks
-    if (verification.status !== 'successful') {
-      console.error('Payment verification failed: status not successful', verification);
-      res.status(400).json({ message: 'Payment was not successful' });
+    if (verification.status !== 'completed') {
+      console.error('Payment verification failed: status not completed', verification);
+      res.status(400).json({ message: 'Payment was not completed' });
       return;
     }
 

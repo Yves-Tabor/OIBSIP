@@ -16,6 +16,32 @@ import {
 import { PizzaOption, PizzaOptions } from '../types';
 import { Sparkles, ShoppingBag, ArrowRight, ArrowLeft, RefreshCw, Check, Loader2, AlertCircle, X } from 'lucide-react';
 
+// Paddle.js types
+declare global {
+  interface Window {
+    Paddle: {
+      Environment: {
+        set: (env: 'sandbox' | 'production') => void;
+      };
+      Initialize: (options: { token: string }) => void;
+      Checkout: {
+        open: (options: {
+          transactionId: string;
+          customer?: {
+            email: string;
+            name: string;
+          };
+          settings?: {
+            displayMode?: 'overlay' | 'inline';
+            theme?: 'light' | 'dark';
+            variant?: 'one-page' | 'multi-page' | 'express';
+          };
+        }) => void;
+      };
+    };
+  }
+}
+
 const PLACEHOLDER = 'https://placehold.co/400x300/FDE8D4/6B3520?text=Ingredient';
 
 const PizzaBuilderPage = () => {
@@ -48,13 +74,44 @@ const PizzaBuilderPage = () => {
       });
   }, [dispatch]);
 
-  // Handle return callback from Flutterwave redirect
+  // Initialize Paddle.js
+  useEffect(() => {
+    const paddleEnvironment = import.meta.env.VITE_PADDLE_ENVIRONMENT || 'sandbox';
+    const paddleToken = paddleEnvironment === 'sandbox' 
+      ? import.meta.env.VITE_PADDLE_SANDBOX_CLIENT_TOKEN 
+      : import.meta.env.VITE_PADDLE_PRODUCTION_CLIENT_TOKEN;
+
+    if (!window.Paddle) {
+      // Load Paddle.js script
+      const script = document.createElement('script');
+      script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+      script.async = true;
+      script.onload = () => {
+        if (window.Paddle) {
+          window.Paddle.Environment.set(paddleEnvironment as 'sandbox' | 'production');
+          window.Paddle.Initialize({
+            token: paddleToken,
+          });
+          console.log('Paddle.js initialized');
+        }
+      };
+      document.body.appendChild(script);
+    } else {
+      // Paddle.js already loaded, just initialize
+      window.Paddle.Environment.set(paddleEnvironment as 'sandbox' | 'production');
+      window.Paddle.Initialize({
+        token: paddleToken,
+      });
+      console.log('Paddle.js re-initialized');
+    }
+  }, []);
+
+  // Handle return callback from Paddle checkout (if using redirect)
   useEffect(() => {
     const status = searchParams.get('status');
     const transactionId = searchParams.get('transaction_id');
-    const txRef = searchParams.get('tx_ref');
 
-    if (status === 'successful' && transactionId) {
+    if (status === 'completed' && transactionId) {
       setCheckoutLoading(true);
       const savedBuildStr = localStorage.getItem('pendingPizzaBuild');
       
@@ -63,8 +120,8 @@ const PizzaBuilderPage = () => {
           const savedBuild = JSON.parse(savedBuildStr);
           
           orderApi.verifyPayment({
-            transactionId,
-            txRef: savedBuild.txRef || txRef,
+            transactionId: transactionId,
+            txRef: savedBuild.txRef,
             items: savedBuild.items,
             totalPrice: savedBuild.totalPrice,
           })
@@ -180,17 +237,31 @@ const PizzaBuilderPage = () => {
         totalPrice: total,
       };
 
-      // Fetch payment link from backend
+      // Create Paddle transaction from backend
       const response = await orderApi.initializePayment(orderPayload);
       
-      // Save custom build details with txRef to restore after payment callback
+      // Save custom build details with txRef and transactionId to restore after payment callback
       localStorage.setItem('pendingPizzaBuild', JSON.stringify({
         ...orderPayload,
         txRef: response.data.txRef,
+        transactionId: response.data.transactionId,
       }));
-      
-      // Redirect to Flutterwave Secure Checkout
-      window.location.href = response.data.paymentLink;
+
+      // Open Paddle Checkout with the transaction ID
+      if (window.Paddle && window.Paddle.Checkout) {
+        window.Paddle.Checkout.open({
+          transactionId: response.data.transactionId,
+          settings: {
+            displayMode: 'overlay',
+            theme: 'light',
+            variant: 'multi-page',
+          },
+        });
+        setCheckoutLoading(false);
+      } else {
+        setCheckoutLoading(false);
+        setErrorMessage('Paddle.js not loaded. Please refresh the page and try again.');
+      }
     } catch (err: any) {
       setCheckoutLoading(false);
       setErrorMessage(err.response?.data?.message || 'Failed to initialize checkout. Please try again.');

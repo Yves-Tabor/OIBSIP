@@ -14,9 +14,11 @@ const envSchema = z.object({
   EMAIL_USER: z.string(),
   EMAIL_PASSWORD: z.string(),
   EMAIL_FROM: z.string(),
-  FLW_CLIENT_ID: z.string(),
-  FLW_CLIENT_SECRET: z.string(),
-  FLW_ENCRYPTION_KEY: z.string(),
+  PADDLE_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
+  PADDLE_SANDBOX_API_KEY: z.string(),
+  PADDLE_SANDBOX_WEBHOOK_SECRET: z.string().optional(),
+  PADDLE_PRODUCTION_API_KEY: z.string().optional(),
+  PADDLE_PRODUCTION_WEBHOOK_SECRET: z.string().optional(),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
 });
 
