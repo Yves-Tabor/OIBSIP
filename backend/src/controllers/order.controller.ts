@@ -16,7 +16,7 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const txRef = `order_${Date.now()}`;
+    const txRef = `order_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const paymentLink = await initializeFlutterwavePayment({
       amount: totalPrice,
       txRef,
@@ -26,22 +26,55 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       },
     });
 
-    res.status(200).json({ paymentLink });
-  } catch (error) {
+    res.status(200).json({ paymentLink, txRef });
+  } catch (error: any) {
     console.error('Create payment link error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Failed to initialize payment' });
   }
 };
 
 // Verify Payment and Create Order
 export const verifyPayment = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { transactionId, items, totalPrice } = req.body;
+    const { transactionId, txRef, items, totalPrice } = req.body;
+
+    if (!transactionId || !txRef) {
+      res.status(400).json({ message: 'Transaction ID and txRef are required' });
+      return;
+    }
+
+    // Check for duplicate order
+    const existingOrder = await Order.findOne({ paymentId: transactionId });
+    if (existingOrder) {
+      res.status(400).json({ message: 'Order already exists for this transaction' });
+      return;
+    }
 
     // Verify payment status with Flutterwave API
     const verification = await verifyFlutterwavePayment(transactionId);
+    
+    // Comprehensive verification checks
     if (verification.status !== 'successful') {
-      res.status(400).json({ message: 'Payment verification failed' });
+      console.error('Payment verification failed: status not successful', verification);
+      res.status(400).json({ message: 'Payment was not successful' });
+      return;
+    }
+
+    if (verification.currency !== 'USD') {
+      console.error('Payment verification failed: currency mismatch', { expected: 'USD', received: verification.currency });
+      res.status(400).json({ message: 'Payment currency must be USD' });
+      return;
+    }
+
+    if (verification.txRef !== txRef) {
+      console.error('Payment verification failed: txRef mismatch', { expected: txRef, received: verification.txRef });
+      res.status(400).json({ message: 'Transaction reference mismatch' });
+      return;
+    }
+
+    if (verification.amount !== totalPrice) {
+      console.error('Payment verification failed: amount mismatch', { expected: totalPrice, received: verification.amount });
+      res.status(400).json({ message: 'Payment amount does not match order total' });
       return;
     }
 
@@ -61,6 +94,7 @@ export const verifyPayment = async (req: Request, res: Response): Promise<void> 
       items,
       totalPrice,
       paymentId: transactionId,
+      txRef,
       status: 'Order Received',
     });
 
@@ -71,9 +105,9 @@ export const verifyPayment = async (req: Request, res: Response): Promise<void> 
       message: 'Order created successfully',
       order,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Verify payment error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Payment verification failed' });
   }
 };
 
@@ -91,9 +125,9 @@ export const getMyOrders = async (req: Request, res: Response): Promise<void> =>
   try {
     const orders = await Order.find({ user: req.userId }).sort({ createdAt: -1 });
     res.status(200).json(orders);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my orders error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Failed to fetch orders' });
   }
 };
 
@@ -115,9 +149,9 @@ export const getOrderById = async (req: Request, res: Response): Promise<void> =
     }
 
     res.status(200).json(order);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get order by ID error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Failed to fetch order' });
   }
 };
 
@@ -126,9 +160,9 @@ export const getAllOrders = async (req: Request, res: Response): Promise<void> =
   try {
     const orders = await Order.find().populate('user', 'name email').sort({ createdAt: -1 });
     res.status(200).json(orders);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get all orders error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Failed to fetch orders' });
   }
 };
 
@@ -151,8 +185,8 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
     emitOrderUpdate(order.user.toString(), order);
 
     res.status(200).json(order);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update order status error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Failed to update order status' });
   }
 };

@@ -2,11 +2,12 @@ import api from '../utils/axios';
 import { Order } from '../types';
 
 export const orderApi = {
-  initializePayment: (data: { items: any[]; totalPrice: number }): Promise<{ data: { paymentLink: string } }> =>
+  initializePayment: (data: { items: any[]; totalPrice: number }): Promise<{ data: { paymentLink: string; txRef: string } }> =>
     api.post('/orders/initialize-payment', data),
   
   verifyPayment: (data: {
     transactionId: string;
+    txRef: string;
     items: any[];
     totalPrice: number;
   }): Promise<{ data: { message: string; order: Order } }> =>

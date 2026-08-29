@@ -52,6 +52,7 @@ const PizzaBuilderPage = () => {
   useEffect(() => {
     const status = searchParams.get('status');
     const transactionId = searchParams.get('transaction_id');
+    const txRef = searchParams.get('tx_ref');
 
     if (status === 'successful' && transactionId) {
       setCheckoutLoading(true);
@@ -63,6 +64,7 @@ const PizzaBuilderPage = () => {
           
           orderApi.verifyPayment({
             transactionId,
+            txRef: savedBuild.txRef || txRef,
             items: savedBuild.items,
             totalPrice: savedBuild.totalPrice,
           })
@@ -178,11 +180,14 @@ const PizzaBuilderPage = () => {
         totalPrice: total,
       };
 
-      // Save custom build details to restore after payment callback
-      localStorage.setItem('pendingPizzaBuild', JSON.stringify(orderPayload));
-
       // Fetch payment link from backend
       const response = await orderApi.initializePayment(orderPayload);
+      
+      // Save custom build details with txRef to restore after payment callback
+      localStorage.setItem('pendingPizzaBuild', JSON.stringify({
+        ...orderPayload,
+        txRef: response.data.txRef,
+      }));
       
       // Redirect to Flutterwave Secure Checkout
       window.location.href = response.data.paymentLink;

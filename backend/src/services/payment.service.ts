@@ -11,10 +11,18 @@ interface InitializePaymentParams {
 
 export const initializeFlutterwavePayment = async (params: InitializePaymentParams): Promise<string> => {
   try {
+    // Log Flutterwave secret key verification (without exposing the actual key)
+    const secretKey = env.FLUTTERWAVE_SECRET_KEY;
+    console.log('Flutterwave Secret Key Verification:', {
+      exists: !!secretKey,
+      length: secretKey?.length || 0,
+      startsWithFLWSECK_TEST: secretKey?.startsWith('FLWSECK_TEST-') || false,
+    });
+
     const payload = {
       tx_ref: params.txRef,
       amount: params.amount,
-      currency: 'NGN', // Can change or customize
+      currency: 'USD',
       redirect_url: `${env.FRONTEND_URL}/menu`,
       customer: {
         email: params.customer.email,
@@ -37,7 +45,12 @@ export const initializeFlutterwavePayment = async (params: InitializePaymentPara
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Flutterwave initialisation error: ${JSON.stringify(errorData)}`);
+      console.error('Flutterwave API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData,
+      });
+      throw new Error(`Flutterwave API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
     }
 
     const resJson = await response.json() as {
@@ -49,6 +62,7 @@ export const initializeFlutterwavePayment = async (params: InitializePaymentPara
     };
 
     if (resJson.status !== 'success' || !resJson.data?.link) {
+      console.error('Flutterwave initialization failed:', resJson);
       throw new Error(resJson.message || 'Failed to initialize payment link');
     }
 
@@ -61,7 +75,7 @@ export const initializeFlutterwavePayment = async (params: InitializePaymentPara
 
 export const verifyFlutterwavePayment = async (
   transactionId: string
-): Promise<{ status: string; amount: number; txRef: string }> => {
+): Promise<{ status: string; amount: number; txRef: string; currency: string }> => {
   try {
     const response = await fetch(`https://api.flutterwave.com/v3/transactions/${transactionId}/verify`, {
       method: 'GET',
@@ -72,7 +86,12 @@ export const verifyFlutterwavePayment = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Flutterwave verification error: ${JSON.stringify(errorData)}`);
+      console.error('Flutterwave Verification API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData,
+      });
+      throw new Error(`Flutterwave verification error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
     }
 
     const resJson = await response.json() as {
@@ -83,10 +102,12 @@ export const verifyFlutterwavePayment = async (
         status: string;
         amount: number;
         tx_ref: string;
+        currency: string;
       };
     };
 
     if (resJson.status !== 'success' || !resJson.data) {
+      console.error('Flutterwave verification failed:', resJson);
       throw new Error(resJson.message || 'Failed to verify transaction');
     }
 
@@ -94,6 +115,7 @@ export const verifyFlutterwavePayment = async (
       status: resJson.data.status,
       amount: resJson.data.amount,
       txRef: resJson.data.tx_ref,
+      currency: resJson.data.currency,
     };
   } catch (error) {
     console.error('verifyFlutterwavePayment error:', error);

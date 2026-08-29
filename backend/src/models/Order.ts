@@ -13,6 +13,7 @@ export interface IOrder extends Document {
   items: IOrderItem[];
   totalPrice: number;
   paymentId?: string;
+  txRef?: string;
   status: 'Order Received' | 'In Kitchen' | 'Sent to Delivery' | 'Delivered';
   createdAt: Date;
   updatedAt: Date;
@@ -39,6 +40,7 @@ const orderSchema = new Schema<IOrder>(
       required: true,
     },
     paymentId: String,
+    txRef: String,
     status: {
       type: String,
       enum: ['Order Received', 'In Kitchen', 'Sent to Delivery', 'Delivered'],
