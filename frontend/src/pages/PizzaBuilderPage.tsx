@@ -36,7 +36,13 @@ declare global {
             theme?: 'light' | 'dark';
             variant?: 'one-page' | 'multi-page' | 'express';
           };
+          successUrl?: string;
         }) => void;
+        close: () => void;
+      };
+      Event: {
+        addListener: (event: string, callback: (data: any) => void) => void;
+        removeListener: (event: string, callback: (data: any) => void) => void;
       };
     };
   }
@@ -104,7 +110,62 @@ const PizzaBuilderPage = () => {
       });
       console.log('Paddle.js re-initialized');
     }
-  }, []);
+
+    // Add event listener for checkout completion
+    const handleCheckoutComplete = (data: any) => {
+      console.log('Paddle checkout completed:', data);
+      setCheckoutLoading(true);
+      
+      const savedBuildStr = localStorage.getItem('pendingPizzaBuild');
+      if (savedBuildStr) {
+        try {
+          const savedBuild = JSON.parse(savedBuildStr);
+          
+          orderApi.verifyPayment({
+            transactionId: savedBuild.transactionId,
+            txRef: savedBuild.txRef,
+            items: savedBuild.items,
+            totalPrice: savedBuild.totalPrice,
+          })
+          .then((res) => {
+            setCheckoutLoading(false);
+            dispatch(clearCart());
+            localStorage.removeItem('pendingPizzaBuild');
+            
+            // Redirect to orders page
+            navigate('/orders');
+          })
+          .catch((err) => {
+            setCheckoutLoading(false);
+            setErrorMessage(err.response?.data?.message || 'Payment verification failed. Please contact customer support.');
+          });
+        } catch (e) {
+          setCheckoutLoading(false);
+          setErrorMessage('Could not load order details. Please contact customer support.');
+        }
+      }
+    };
+
+    const handleCheckoutClose = (data: any) => {
+      console.log('Paddle checkout closed:', data);
+      if (data && !data.checkout_completed) {
+        setErrorMessage('Payment was cancelled. You can try checkout again.');
+      }
+      setCheckoutLoading(false);
+    };
+
+    if (window.Paddle && window.Paddle.Event) {
+      window.Paddle.Event.addListener('checkoutComplete', handleCheckoutComplete);
+      window.Paddle.Event.addListener('checkoutClosed', handleCheckoutClose);
+    }
+
+    return () => {
+      if (window.Paddle && window.Paddle.Event) {
+        window.Paddle.Event.removeListener('checkoutComplete', handleCheckoutComplete);
+        window.Paddle.Event.removeListener('checkoutClosed', handleCheckoutClose);
+      }
+    };
+  }, [dispatch, navigate]);
 
   // Handle return callback from Paddle checkout (if using redirect)
   useEffect(() => {

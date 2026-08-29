@@ -14,7 +14,7 @@ A full-featured pizza delivery application with Express/TypeScript/MongoDB backe
   - Step 3: Choose cheese type (5+ options)
   - Step 4: Select vegetables (multiple selection)
 - **Order Summary** - Real-time price calculation and order review before payment
-- **Flutterwave Payment Integration** - Secure payment processing via Flutterwave (test mode)
+- **Paddle Payment Integration** - Secure payment processing via Paddle (sandbox mode for development)
 - **Real-Time Order Tracking** - Live status updates from Order Received → In Kitchen → Sent to Delivery → Delivered
 - **Order History** - View all past orders with status and details
 
@@ -34,7 +34,7 @@ A full-featured pizza delivery application with Express/TypeScript/MongoDB backe
 
 ## Tech Stack
 
-**Backend:** Node.js, Express, TypeScript, MongoDB, Mongoose, JWT, Socket.io, Nodemailer, Flutterwave, node-cron, Zod
+**Backend:** Node.js, Express, TypeScript, MongoDB, Mongoose, JWT, Socket.io, Nodemailer, Paddle, node-cron, Zod
 
 **Frontend:** React 18, TypeScript, Redux Toolkit, React Router, Axios, Tailwind CSS, Lucide React, Socket.io-client
 
@@ -95,8 +95,14 @@ EMAIL_PORT=587
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASSWORD=your_app_password
 EMAIL_FROM=DailyPizza <noreply@dailypizza.com>
-FLUTTERWAVE_PUBLIC_KEY=FLWPUBK_TEST-your_flutterwave_public_key
-FLUTTERWAVE_SECRET_KEY=FLWSECK_TEST-your_flutterwave_secret_key
+
+# Paddle Payment
+PADDLE_ENVIRONMENT=sandbox
+PADDLE_SANDBOX_API_KEY=pdl_sdbx_apikey_YOUR_SANDBOX_API_KEY_HERE
+PADDLE_SANDBOX_WEBHOOK_SECRET=
+PADDLE_PRODUCTION_API_KEY=pdl_live_apikey_YOUR_PRODUCTION_API_KEY_HERE
+PADDLE_PRODUCTION_WEBHOOK_SECRET=pdl_webhook_secret_YOUR_PRODUCTION_WEBHOOK_SECRET_HERE
+
 FRONTEND_URL=http://localhost:5173
 ```
 
@@ -115,6 +121,11 @@ Create `.env`:
 ```env
 VITE_API_URL=http://localhost:5000/api
 VITE_SOCKET_URL=http://localhost:5000
+
+# Paddle Payment
+VITE_PADDLE_ENVIRONMENT=sandbox
+VITE_PADDLE_SANDBOX_CLIENT_TOKEN=test_YOUR_SANDBOX_CLIENT_TOKEN_HERE
+VITE_PADDLE_PRODUCTION_CLIENT_TOKEN=pdl_YOUR_PRODUCTION_CLIENT_TOKEN_HERE
 ```
 
 Run:
@@ -126,7 +137,7 @@ pnpm run dev
 
 **Auth:** POST /api/auth/register, POST /api/auth/login, GET /api/auth/verify-email/:token, POST /api/auth/forgot-password, POST /api/auth/reset-password/:token, GET /api/auth/me
 
-**Orders:** POST /api/orders/initialize-payment, POST /api/orders/verify-payment, GET /api/orders/my-orders, GET /api/orders/:id, GET /api/orders/admin/all, PATCH /api/orders/:id/status
+**Orders:** POST /api/orders/initialize-payment, POST /api/orders/verify-payment, POST /api/orders/paddle/webhook, GET /api/orders/my-orders, GET /api/orders/:id, GET /api/orders/admin/all, PATCH /api/orders/:id/status
 
 **Pizza:** GET /api/pizza/options
 
@@ -166,7 +177,7 @@ Alternatively, you can create a script to seed an admin user during development.
 
 **Email:** Use Gmail App Password (not regular password), enable 2FA. In development mode, email verification is auto-disabled if sending fails.
 
-**Flutterwave:** Update your Flutterwave API keys in .env with your test or production keys from the Flutterwave dashboard.
+**Paddle:** Update your Paddle API keys and client tokens in .env with your sandbox or production credentials from the Paddle dashboard. The webhook secret is optional for development.
 
 **Socket.io:** Check that the frontend VITE_SOCKET_URL matches the backend URL and CORS settings are properly configured.
 
@@ -180,7 +191,7 @@ For production deployment:
    - Set `NODE_ENV=production` in .env
    - Use a production MongoDB instance (MongoDB Atlas recommended)
    - Update JWT_SECRET to a strong, random value
-   - Use production Flutterwave API keys
+   - Set `PADDLE_ENVIRONMENT=production` and use production Paddle credentials
    - Configure proper CORS settings for your domain
    - Use a process manager like PM2: `pm2 start dist/main.js`
 

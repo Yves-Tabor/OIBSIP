@@ -3,7 +3,7 @@ import Order from '../models/Order';
 import Inventory from '../models/Inventory';
 import User from '../models/User';
 import { initializePaddlePayment, verifyPaddlePayment } from '../services/payment.service';
-import { emitOrderUpdate } from '../sockets/order.socket';
+import { emitOrderUpdate, emitOrderStatusUpdate } from '../sockets/order.socket';
 
 // Create Paddle Transaction
 export const createOrder = async (req: Request, res: Response): Promise<void> => {
