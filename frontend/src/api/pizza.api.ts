@@ -9,6 +9,6 @@ export const pizzaApi = {
     category: string;
     name: string;
     inStock: boolean;
-  }) =>
+  }): Promise<{ data: { message: string } }> =>
     api.patch('/pizza/options/stock', data),
 };

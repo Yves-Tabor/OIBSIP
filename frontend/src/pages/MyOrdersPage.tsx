@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../hooks/useAuth';
 import { getMyOrders } from '../features/order/orderSlice';
 import { orderApi } from '../api/order.api';
+import { parsePendingPizzaBuild } from '../utils/storage';
 
 const MyOrdersPage = () => {
   const dispatch = useAppDispatch();
@@ -18,7 +19,7 @@ const MyOrdersPage = () => {
 
       if (savedBuildStr) {
         try {
-          const savedBuild = JSON.parse(savedBuildStr);
+          const savedBuild = parsePendingPizzaBuild(savedBuildStr);
           orderApi.verifyPayment({
             transactionId: savedBuild.transactionId ?? transactionId,
           })

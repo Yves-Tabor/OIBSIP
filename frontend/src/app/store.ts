@@ -1,5 +1,6 @@
-import { configureStore, ThunkDispatch, AnyAction } from '@reduxjs/toolkit';
+import { configureStore, type ThunkDispatch } from '@reduxjs/toolkit';
 import { useDispatch, useSelector } from 'react-redux';
+import type { UnknownAction } from 'redux';
 import authReducer from '../features/auth/authSlice';
 import cartReducer from '../features/cart/cartSlice';
 import orderReducer from '../features/order/orderSlice';
@@ -23,7 +24,7 @@ export const store = configureStore({
 });
 
 export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = ThunkDispatch<RootState, unknown, AnyAction>;
+export type AppDispatch = ThunkDispatch<RootState, unknown, UnknownAction>;
 
 export const useAppDispatch = () => useDispatch<AppDispatch>();
 export const useAppSelector = useSelector.withTypes<RootState>();

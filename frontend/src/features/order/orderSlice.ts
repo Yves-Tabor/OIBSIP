@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { Order } from '../../types';
 import { orderApi } from '../../api/order.api';
+import { getApiErrorMessage } from '../../utils/errors';
 
 interface OrderState {
   orders: Order[];
@@ -22,8 +23,8 @@ export const getMyOrders = createAsyncThunk(
     try {
       const response = await orderApi.getMyOrders();
       return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch orders');
+    } catch (error: unknown) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to fetch orders'));
     }
   }
 );
@@ -34,8 +35,8 @@ export const getOrderById = createAsyncThunk(
     try {
       const response = await orderApi.getOrderById(id);
       return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch order');
+    } catch (error: unknown) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to fetch order'));
     }
   }
 );
@@ -46,8 +47,8 @@ export const updateOrderStatus = createAsyncThunk(
     try {
       const response = await orderApi.updateOrderStatus(id, status);
       return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update order');
+    } catch (error: unknown) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to update order'));
     }
   }
 );

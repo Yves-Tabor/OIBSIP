@@ -29,9 +29,40 @@ export interface OrderItem {
   quantity?: number;
 }
 
+export interface PizzaBuildItem {
+  base: string;
+  sauce: string;
+  cheese: string;
+  vegetables: string[];
+  quantity?: number;
+}
+
+export interface PendingPizzaBuild {
+  items: PizzaBuildItem[];
+  totalPrice: number;
+  txRef: string;
+  transactionId: string;
+}
+
+export interface NotificationEvent {
+  _id: string;
+  message: string;
+  type: 'order-status' | 'inventory' | 'order';
+  read: boolean;
+  createdAt: string;
+}
+
+export interface AdminNewOrderEvent {
+  orderId: string;
+  userName: string;
+  totalPrice: number;
+  items: PizzaBuildItem[];
+  status: Order['status'];
+}
+
 export interface Order {
   _id: string;
-  user: string;
+  user: string | User;
   items: OrderItem[];
   totalPrice: number;
   paymentId?: string;

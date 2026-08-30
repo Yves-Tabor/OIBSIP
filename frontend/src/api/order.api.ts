@@ -1,8 +1,8 @@
 import api from '../utils/axios';
-import { Order } from '../types';
+import { Order, PizzaBuildItem } from '../types';
 
 export const orderApi = {
-  initializePayment: (data: { items: any[]; totalPrice: number }): Promise<{ data: { txRef: string; transactionId: string } }> =>
+  initializePayment: (data: { items: PizzaBuildItem[]; totalPrice: number }): Promise<{ data: { txRef: string; transactionId: string } }> =>
     api.post('/orders/initialize-payment', data),
   
   verifyPayment: (data: { transactionId: string }): Promise<{ data: { success: boolean; message: string } }> =>

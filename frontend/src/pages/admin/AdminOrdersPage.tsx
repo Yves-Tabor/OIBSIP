@@ -3,11 +3,12 @@ import { useAppDispatch, useAppSelector } from '../../hooks/useAuth';
 import { orderApi } from '../../api/order.api';
 import { updateOrderStatus } from '../../features/order/orderSlice';
 import { useSocket } from '../../hooks/useSocket';
+import { Order } from '../../types';
 
 const AdminOrdersPage = () => {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useSocket(user?.id, true);
@@ -79,7 +80,7 @@ const AdminOrdersPage = () => {
                     Order #{order._id.slice(-6)}
                   </p>
                   <p className="text-sm text-brand-text-secondary mt-1">
-                    Customer: {order.user?.name || 'Unknown'}
+                    Customer: {typeof order.user === 'object' ? order.user.name : 'Unknown'}
                   </p>
                   <p className="text-sm text-brand-text-secondary">
                     {new Date(order.createdAt).toLocaleString()}

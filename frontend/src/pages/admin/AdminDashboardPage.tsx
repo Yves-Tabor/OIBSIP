@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { adminApi, Analytics } from '../../api/admin.api';
 import { useAppSelector } from '../../hooks/useAuth';
 import { useSocket } from '../../hooks/useSocket';
+import { AdminNewOrderEvent } from '../../types';
 
 const money = (value: number) => `$${Number(value || 0).toFixed(2)}`;
 
@@ -23,12 +24,13 @@ const AdminDashboardPage = () => {
 
   useEffect(() => {
     if (!socket) return;
-    const handleNewOrder = (order: any) => {
+    const handleNewOrder = (order: AdminNewOrderEvent) => {
       setToast(`New order from ${order.userName || 'Customer'} - ${money(order.totalPrice)}`);
       window.setTimeout(() => setToast(null), 4000);
     };
     socket.on('admin:new-order', handleNewOrder);
-    return () => socket.off('admin:new-order', handleNewOrder);
+    socket.off('admin:new-order', handleNewOrder);
+    return undefined;
   }, [socket]);
 
   const stats = [

@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { InventoryItem } from '../../types';
 import { inventoryApi } from '../../api/inventory.api';
+import { getApiErrorMessage } from '../../utils/errors';
 
 interface InventoryState {
   items: InventoryItem[];
@@ -20,8 +21,8 @@ export const getAllInventory = createAsyncThunk(
     try {
       const response = await inventoryApi.getAllInventory();
       return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch inventory');
+    } catch (error: unknown) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to fetch inventory'));
     }
   }
 );
@@ -39,8 +40,8 @@ export const createInventory = createAsyncThunk(
     try {
       const response = await inventoryApi.createInventory(data);
       return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create inventory item');
+    } catch (error: unknown) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to create inventory item'));
     }
   }
 );
@@ -51,8 +52,8 @@ export const updateInventory = createAsyncThunk(
     try {
       const response = await inventoryApi.updateInventory(id, data);
       return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update inventory');
+    } catch (error: unknown) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to update inventory'));
     }
   }
 );
@@ -63,8 +64,8 @@ export const deleteInventory = createAsyncThunk(
     try {
       await inventoryApi.deleteInventory(id);
       return id;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to delete inventory');
+    } catch (error: unknown) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to delete inventory'));
     }
   }
 );

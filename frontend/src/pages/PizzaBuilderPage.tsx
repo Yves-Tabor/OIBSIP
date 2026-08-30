@@ -13,7 +13,9 @@ import {
   clearCart,
   selectCartTotal,
 } from '../features/cart/cartSlice';
-import { PizzaOption, PizzaOptions } from '../types';
+import { Order, PizzaOption, PizzaOptions } from '../types';
+import { getApiErrorMessage } from '../utils/errors';
+import { parsePendingPizzaBuild } from '../utils/storage';
 import { Sparkles, ShoppingBag, ArrowRight, ArrowLeft, RefreshCw, Check, Loader2, AlertCircle, X } from 'lucide-react';
 
 // Paddle.js types
@@ -24,7 +26,7 @@ declare global {
       Environment: {
         set: (env: 'sandbox' | 'production') => void;
       };
-      Initialize: (options: { token: string; eventCallback?: (data: any) => void }) => void;
+      Initialize: (options: { token: string; eventCallback?: (data: PaddleEvent) => void }) => void;
       Checkout: {
         open: (options: {
           transactionId: string;
@@ -42,11 +44,19 @@ declare global {
         close: () => void;
       };
       Event: {
-        addListener: (event: string, callback: (data: any) => void) => void;
-        removeListener: (event: string, callback: (data: any) => void) => void;
+        addListener: (event: string, callback: (data: PaddleEvent) => void) => void;
+        removeListener: (event: string, callback: (data: PaddleEvent) => void) => void;
       };
     };
   }
+}
+
+interface PaddleEvent {
+  name?: string;
+  detail?: string;
+  data?: { id?: string; transaction_id?: string };
+  transaction_id?: string;
+  checkout_completed?: boolean;
 }
 
 const PLACEHOLDER = 'https://placehold.co/400x300/FDE8D4/6B3520?text=Ingredient';
@@ -106,7 +116,7 @@ const PizzaBuilderPage = () => {
         try {
           const response = await orderApi.getMyOrders();
           initialOrderCount ??= response.data.length;
-          const matchingOrder = response.data.find((order: any) => (
+          const matchingOrder = response.data.find((order: Order) => (
             order.paymentId === transactionId ||
             order.txRef === txRef
           ));
@@ -131,7 +141,7 @@ const PizzaBuilderPage = () => {
       navigate('/orders', { replace: true });
     };
 
-    const handleCheckoutComplete = (data: any) => {
+    const handleCheckoutComplete = (data: PaddleEvent) => {
       console.log('Paddle checkout completed:', data);
       if (checkoutHandledRef.current) return;
       checkoutHandledRef.current = true;
@@ -141,7 +151,7 @@ const PizzaBuilderPage = () => {
       const savedBuildStr = localStorage.getItem('pendingPizzaBuild');
       if (savedBuildStr) {
         try {
-          const savedBuild = JSON.parse(savedBuildStr);
+          const savedBuild = parsePendingPizzaBuild(savedBuildStr);
           const transactionId = data?.data?.transaction_id || data?.transaction_id || savedBuild.transactionId;
           const txRef = savedBuild.txRef;
 
@@ -179,7 +189,7 @@ const PizzaBuilderPage = () => {
       }
     };
 
-    const handlePaddleEvent = (data: any) => {
+    const handlePaddleEvent = (data: PaddleEvent) => {
       if (data?.name === 'checkout.completed') {
         handleCheckoutComplete(data);
         return;
@@ -193,7 +203,7 @@ const PizzaBuilderPage = () => {
       }
     };
 
-    const handleCheckoutClose = (data: any) => {
+    const handleCheckoutClose = (data: PaddleEvent) => {
       console.log('Paddle checkout closed:', data);
       if (data && !data.checkout_completed) {
         setErrorMessage('Payment was cancelled. You can try checkout again.');
@@ -263,7 +273,7 @@ const PizzaBuilderPage = () => {
       
       if (savedBuildStr) {
         try {
-          JSON.parse(savedBuildStr);
+          parsePendingPizzaBuild(savedBuildStr);
           
           orderApi.verifyPayment({
             transactionId,
@@ -410,9 +420,9 @@ const PizzaBuilderPage = () => {
         setCheckoutLoading(false);
         setErrorMessage('Paddle.js not loaded. Please refresh the page and try again.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setCheckoutLoading(false);
-      setErrorMessage(err.response?.data?.message || 'Failed to initialize checkout. Please try again.');
+      setErrorMessage(getApiErrorMessage(err, 'Failed to initialize checkout. Please try again.'));
     }
   };
 

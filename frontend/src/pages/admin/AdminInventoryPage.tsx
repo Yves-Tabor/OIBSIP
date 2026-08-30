@@ -3,6 +3,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks/useAuth';
 import { inventoryApi } from '../../api/inventory.api';
 import { getAllInventory } from '../../features/inventory/inventorySlice';
 import { Plus, Pencil, Trash2, ImageIcon, X } from 'lucide-react';
+import { InventoryItem } from '../../types';
 
 const PLACEHOLDER = 'https://placehold.co/400x300/FDE8D4/6B3520?text=No+Image';
 
@@ -10,7 +11,7 @@ const AdminInventoryPage = () => {
   const dispatch = useAppDispatch();
   const { items, isLoading } = useAppSelector((state) => state.inventory);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [formData, setFormData] = useState({
     item: '',
     category: 'base' as 'base' | 'sauce' | 'cheese' | 'vegetable',
@@ -52,7 +53,7 @@ const AdminInventoryPage = () => {
     }
   };
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: InventoryItem) => {
     setEditingItem(item);
     setFormData({
       item: item.item,
@@ -261,7 +262,10 @@ const AdminInventoryPage = () => {
                 </label>
                 <select
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+                  onChange={(e) => {
+                    const category = e.target.value as typeof formData.category;
+                    setFormData({ ...formData, category });
+                  }}
                   className="w-full bg-white border border-brand-border rounded px-3 py-2.5 text-brand-text-primary focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-colors duration-150"
                   disabled={!!editingItem}
                 >

@@ -1,13 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { AuthState } from '../../types';
 import { authApi } from '../../api/auth.api';
+import { getApiErrorMessage, isApiError } from '../../utils/errors';
+import { readStoredUser } from '../../utils/storage';
 
 // Try to hydrate user from localStorage for instant display
-const storedUser = localStorage.getItem('user');
-const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-
 const initialState: AuthState = {
-  user: parsedUser,
+  user: readStoredUser(),
   token: localStorage.getItem('token'),
   isAuthenticated: !!localStorage.getItem('token'),
   isLoading: false,
@@ -20,8 +19,8 @@ export const register = createAsyncThunk(
     try {
       const response = await authApi.register(data);
       return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Registration failed');
+    } catch (error: unknown) {
+      return rejectWithValue(getApiErrorMessage(error, 'Registration failed'));
     }
   }
 );
@@ -34,19 +33,19 @@ export const login = createAsyncThunk(
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       return response.data;
-    } catch (error: any) {
-      const status = error.response?.status;
-      const message = error.response?.data?.message;
+    } catch (error: unknown) {
+      const status = error instanceof Error && 'response' in error ? (error as { response?: { status?: number } }).response?.status : undefined;
+      const message = error instanceof Error && 'response' in error ? (error as { response?: { data?: { message?: string } } }).response?.data?.message : undefined;
       if (status === 403) {
         return rejectWithValue('EMAIL_NOT_VERIFIED');
       }
       if (status === 401) {
         return rejectWithValue('INVALID_CREDENTIALS');
       }
-      if (!error.response) {
+      if (!isApiError(error)) {
         return rejectWithValue('NETWORK_ERROR');
       }
-      return rejectWithValue(message || 'Login failed');
+      return rejectWithValue(message || getApiErrorMessage(error, 'Login failed'));
     }
   }
 );
@@ -57,8 +56,8 @@ export const getCurrentUser = createAsyncThunk(
     try {
       const response = await authApi.getCurrentUser();
       return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch user');
+    } catch (error: unknown) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to fetch user'));
     }
   }
 );
@@ -75,8 +74,8 @@ export const forgotPassword = createAsyncThunk(
     try {
       const response = await authApi.forgotPassword(email);
       return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to send reset email');
+    } catch (error: unknown) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to send reset email'));
     }
   }
 );
@@ -87,8 +86,8 @@ export const resetPassword = createAsyncThunk(
     try {
       const response = await authApi.resetPassword(data.token, data.password);
       return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Password reset failed');
+    } catch (error: unknown) {
+      return rejectWithValue(getApiErrorMessage(error, 'Password reset failed'));
     }
   }
 );
