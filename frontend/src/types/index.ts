@@ -26,6 +26,7 @@ export interface OrderItem {
   cheese: string;
   vegetables: string[];
   price: number;
+  quantity?: number;
 }
 
 export interface Order {
@@ -37,6 +38,7 @@ export interface Order {
   status: 'Order Received' | 'In Kitchen' | 'Sent to Delivery' | 'Delivered';
   createdAt: string;
   updatedAt: string;
+  txRef?: string;
 }
 
 export interface InventoryItem {

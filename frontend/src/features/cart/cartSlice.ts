@@ -23,13 +23,13 @@ const cartSlice = createSlice({
       state.cheese = action.payload;
     },
     addVegetable: (state, action: PayloadAction<PizzaOption>) => {
-      const exists = state.vegetables.find((v) => v.name === action.payload.name);
+      const exists = state.vegetables.find((v: PizzaOption) => v.name === action.payload.name);
       if (!exists) {
         state.vegetables.push(action.payload);
       }
     },
     removeVegetable: (state, action: PayloadAction<string>) => {
-      state.vegetables = state.vegetables.filter((v) => v.name !== action.payload);
+      state.vegetables = state.vegetables.filter((v: PizzaOption) => v.name !== action.payload);
     },
     setStep: (state, action: PayloadAction<number>) => {
       state.currentStep = action.payload;

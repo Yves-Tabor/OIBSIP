@@ -60,7 +60,7 @@ const orderSlice = createSlice({
       state.currentOrder = action.payload;
     },
     updateOrderRealtime: (state, action: PayloadAction<Order>) => {
-      const index = state.orders.findIndex((o) => o._id === action.payload._id);
+      const index = state.orders.findIndex((o: Order) => o._id === action.payload._id);
       if (index !== -1) {
         state.orders[index] = action.payload;
       }
@@ -69,7 +69,7 @@ const orderSlice = createSlice({
       }
     },
     updateOrderStatusRealtime: (state, action: PayloadAction<Order>) => {
-      const index = state.orders.findIndex((o) => o._id === action.payload._id);
+      const index = state.orders.findIndex((o: Order) => o._id === action.payload._id);
       if (index !== -1) {
         state.orders[index] = action.payload;
       }
@@ -111,7 +111,7 @@ const orderSlice = createSlice({
       })
       // Update Order Status
       .addCase(updateOrderStatus.fulfilled, (state, action) => {
-        const index = state.orders.findIndex((o) => o._id === action.payload._id);
+        const index = state.orders.findIndex((o: Order) => o._id === action.payload._id);
         if (index !== -1) {
           state.orders[index] = action.payload;
         }

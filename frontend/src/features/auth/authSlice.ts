@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { User, AuthState } from '../../types';
+import { AuthState } from '../../types';
 import { authApi } from '../../api/auth.api';
 
 // Try to hydrate user from localStorage for instant display

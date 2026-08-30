@@ -1,9 +1,10 @@
-import { configureStore } from '@reduxjs/toolkit';
-import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
+import { configureStore, ThunkDispatch, AnyAction } from '@reduxjs/toolkit';
+import { useDispatch, useSelector } from 'react-redux';
 import authReducer from '../features/auth/authSlice';
 import cartReducer from '../features/cart/cartSlice';
 import orderReducer from '../features/order/orderSlice';
 import inventoryReducer from '../features/inventory/inventorySlice';
+import notificationReducer from '../features/notification/notificationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -11,6 +12,7 @@ export const store = configureStore({
     cart: cartReducer,
     order: orderReducer,
     inventory: inventoryReducer,
+    notifications: notificationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -21,7 +23,7 @@ export const store = configureStore({
 });
 
 export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
+export type AppDispatch = ThunkDispatch<RootState, unknown, AnyAction>;
 
 export const useAppDispatch = () => useDispatch<AppDispatch>();
-export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+export const useAppSelector = useSelector.withTypes<RootState>();

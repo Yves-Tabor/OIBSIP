@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import Inventory from '../models/Inventory';
+import User from '../models/User';
+import Notification from '../models/Notification';
+import { emitNotification } from '../sockets/order.socket';
 
 // Get All Inventory (Admin)
 export const getAllInventory = async (req: Request, res: Response): Promise<void> => {
@@ -51,6 +54,16 @@ export const createInventory = async (req: Request, res: Response): Promise<void
       price: price || 0,
       imageUrl: imageUrl || '',
     });
+
+    const users = await User.find({}, '_id');
+    await Promise.all(users.map(async (user) => {
+      const notification = await Notification.create({
+        user: user._id,
+        message: `New item available: ${inventory.item}`,
+        type: 'inventory',
+      });
+      emitNotification(user._id.toString(), notification);
+    }));
 
     res.status(201).json(inventory);
   } catch (error) {

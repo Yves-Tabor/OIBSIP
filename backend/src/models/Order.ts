@@ -14,6 +14,7 @@ export interface IOrder extends Document {
   totalPrice: number;
   paymentId?: string;
   txRef?: string;
+  eventId?: string;
   status: 'Order Received' | 'In Kitchen' | 'Sent to Delivery' | 'Delivered';
   createdAt: Date;
   updatedAt: Date;
@@ -32,15 +33,28 @@ const orderSchema = new Schema<IOrder>(
         sauce: { type: String, required: true },
         cheese: { type: String, required: true },
         vegetables: [{ type: String }],
-        price: { type: Number, required: true },
+        quantity: { type: Number, default: 1 },
       },
     ],
     totalPrice: {
       type: Number,
       required: true,
     },
-    paymentId: String,
-    txRef: String,
+    paymentId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    txRef: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    eventId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
     status: {
       type: String,
       enum: ['Order Received', 'In Kitchen', 'Sent to Delivery', 'Delivered'],

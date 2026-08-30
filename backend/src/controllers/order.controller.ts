@@ -4,6 +4,8 @@ import Inventory from '../models/Inventory';
 import User from '../models/User';
 import { initializePaddlePayment, verifyPaddlePayment } from '../services/payment.service';
 import { emitOrderUpdate, emitOrderStatusUpdate } from '../sockets/order.socket';
+import Notification from '../models/Notification';
+import { emitNotification } from '../sockets/order.socket';
 
 // Create Paddle Transaction
 export const createOrder = async (req: Request, res: Response): Promise<void> => {
@@ -35,27 +37,17 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-// Verify Payment and Create Order
 export const verifyPayment = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { transactionId, txRef, items, totalPrice } = req.body;
+    const { transactionId } = req.body;
 
-    if (!transactionId || !txRef) {
-      res.status(400).json({ message: 'Transaction ID and txRef are required' });
+    if (!transactionId || !transactionId.startsWith('txn_')) {
+      res.status(400).json({ message: 'A valid Paddle transaction ID is required' });
       return;
     }
 
-    // Check for duplicate order
-    const existingOrder = await Order.findOne({ paymentId: transactionId });
-    if (existingOrder) {
-      res.status(400).json({ message: 'Order already exists for this transaction' });
-      return;
-    }
-
-    // Verify payment status with Paddle API
     const verification = await verifyPaddlePayment(transactionId);
-    
-    // Comprehensive verification checks
+
     if (verification.status !== 'completed') {
       console.error('Payment verification failed: status not completed', verification);
       res.status(400).json({ message: 'Payment was not completed' });
@@ -68,54 +60,10 @@ export const verifyPayment = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    if (verification.txRef !== txRef) {
-      console.error('Payment verification failed: txRef mismatch', { expected: txRef, received: verification.txRef });
-      res.status(400).json({ message: 'Transaction reference mismatch' });
-      return;
-    }
-
-    // Note: Amount verification skipped since Paddle API doesn't reliably return amount
-    // We trust the frontend-provided amount since the payment was completed successfully
-
-    // Decrement inventory
-    for (const item of items) {
-      await decrementInventory(item.base, 'base');
-      await decrementInventory(item.sauce, 'sauce');
-      await decrementInventory(item.cheese, 'cheese');
-      for (const veg of item.vegetables) {
-        await decrementInventory(veg, 'vegetable');
-      }
-    }
-
-    // Create order
-    const order = await Order.create({
-      user: req.userId,
-      items,
-      totalPrice,
-      paymentId: transactionId,
-      txRef,
-      status: 'Order Received',
-    });
-
-    // Emit socket event
-    emitOrderUpdate(req.userId!.toString(), order);
-
-    res.status(201).json({
-      message: 'Order created successfully',
-      order,
-    });
+    res.status(200).json({ success: true, message: 'Payment confirmed' });
   } catch (error: any) {
     console.error('Verify payment error:', error);
     res.status(500).json({ message: error.message || 'Payment verification failed' });
-  }
-};
-
-// Decrement Inventory Helper
-const decrementInventory = async (item: string, category: string): Promise<void> => {
-  const inventory = await Inventory.findOne({ item, category });
-  if (inventory && inventory.quantity > 0) {
-    inventory.quantity -= 1;
-    await inventory.save();
   }
 };
 
@@ -179,6 +127,13 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
 
     order.status = status;
     await order.save();
+
+    const notification = await Notification.create({
+      user: order.user,
+      message: `Your order #${order._id.toString().slice(-6)} status updated to ${status}`,
+      type: 'order-status',
+    });
+    emitNotification(order.user.toString(), notification);
 
     // Emit socket event to user and admin
     emitOrderStatusUpdate(order.user.toString(), order);

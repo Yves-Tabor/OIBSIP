@@ -33,6 +33,8 @@ export const createInventory = createAsyncThunk(
     category: 'base' | 'sauce' | 'cheese' | 'vegetable';
     quantity: number;
     threshold: number;
+    price: number;
+    imageUrl?: string;
   }, { rejectWithValue }) => {
     try {
       const response = await inventoryApi.createInventory(data);
@@ -96,14 +98,14 @@ const inventorySlice = createSlice({
       })
       // Update Inventory
       .addCase(updateInventory.fulfilled, (state, action) => {
-        const index = state.items.findIndex((i) => i._id === action.payload._id);
+        const index = state.items.findIndex((i: InventoryItem) => i._id === action.payload._id);
         if (index !== -1) {
           state.items[index] = action.payload;
         }
       })
       // Delete Inventory
       .addCase(deleteInventory.fulfilled, (state, action) => {
-        state.items = state.items.filter((i) => i._id !== action.payload);
+        state.items = state.items.filter((i: InventoryItem) => i._id !== action.payload);
       });
   },
 });

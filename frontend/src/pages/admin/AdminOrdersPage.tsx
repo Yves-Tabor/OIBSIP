@@ -6,12 +6,11 @@ import { useSocket } from '../../hooks/useSocket';
 
 const AdminOrdersPage = () => {
   const dispatch = useAppDispatch();
-  const { userId } = useAppSelector((state) => state.auth);
+  const { user } = useAppSelector((state) => state.auth);
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize socket for admin notifications
-  useSocket(userId, true);
+  useSocket(user?.id, true);
 
   useEffect(() => {
     loadOrders();

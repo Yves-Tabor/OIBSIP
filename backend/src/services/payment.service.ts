@@ -15,15 +15,16 @@ const PADDLE_SANDBOX_API = 'https://sandbox-api.paddle.com';
 const PADDLE_PRODUCTION_API = 'https://api.paddle.com';
 
 const getPaddleApiKey = (): string => {
-  return env.PADDLE_ENVIRONMENT === 'sandbox' 
-    ? env.PADDLE_SANDBOX_API_KEY 
+  const paddleEnv = env.PADDLE_ENVIRONMENT || env.PADDLE_ENV || 'sandbox';
+  if (env.PADDLE_API_KEY) return env.PADDLE_API_KEY;
+  return paddleEnv === 'sandbox'
+    ? env.PADDLE_SANDBOX_API_KEY || ''
     : env.PADDLE_PRODUCTION_API_KEY || '';
 };
 
 const getPaddleApiUrl = (): string => {
-  return env.PADDLE_ENVIRONMENT === 'sandbox' 
-    ? PADDLE_SANDBOX_API 
-    : PADDLE_PRODUCTION_API;
+  const paddleEnv = env.PADDLE_ENVIRONMENT || env.PADDLE_ENV || 'sandbox';
+  return paddleEnv === 'sandbox' ? PADDLE_SANDBOX_API : PADDLE_PRODUCTION_API;
 };
 
 export const initializePaddlePayment = async (params: InitializePaymentParams): Promise<{ transactionId: string }> => {
@@ -129,7 +130,7 @@ export const initializePaddlePayment = async (params: InitializePaymentParams): 
 
 export const verifyPaddlePayment = async (
   transactionId: string
-): Promise<{ status: string; amount: number; txRef: string; currency: string }> => {
+): Promise<{ status: string; currency: string }> => {
   try {
     const apiKey = getPaddleApiKey();
     const apiUrl = getPaddleApiUrl();
@@ -163,12 +164,6 @@ export const verifyPaddlePayment = async (
         id: string;
         status: string;
         currency_code: string;
-        totals: {
-          total: string;
-        };
-        custom_data: {
-          txRef: string;
-        };
       };
     };
 
@@ -176,8 +171,6 @@ export const verifyPaddlePayment = async (
       transactionId: resJson.data?.id,
       status: resJson.data?.status,
       currency: resJson.data?.currency_code,
-      total: resJson.data?.totals?.total,
-      txRef: resJson.data?.custom_data?.txRef,
     });
 
     if (!resJson.data || !resJson.data.id) {
@@ -185,12 +178,8 @@ export const verifyPaddlePayment = async (
       throw new Error('Failed to verify Paddle transaction');
     }
 
-    // Paddle API response structure varies - use custom_data for txRef
-    // Amount is not reliably available in Paddle response, so we'll use the frontend-provided amount
     return {
       status: resJson.data.status,
-      amount: 0, // Will be validated against frontend-provided amount
-      txRef: resJson.data.custom_data?.txRef || '',
       currency: resJson.data.currency_code,
     };
   } catch (error) {

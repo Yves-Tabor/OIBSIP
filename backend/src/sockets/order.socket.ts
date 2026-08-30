@@ -14,6 +14,7 @@ export const initializeSocket = (socketIo: SocketIOServer): void => {
     });
 
     socket.on('join-admin-room', () => {
+      socket.join('admin');
       socket.join('admin-room');
       console.log('Admin joined admin room');
     });
@@ -28,9 +29,8 @@ export const initializeSocket = (socketIo: SocketIOServer): void => {
 
 export const emitOrderUpdate = (userId: string, order: any): void => {
   if (io) {
-    // Emit to user's room for their order updates
+    io.to(`user-${userId}`).emit('order:new', order);
     io.to(`user-${userId}`).emit('order:updated', order);
-    // Emit to admin room for new order notification
     io.to('admin-room').emit('admin:new-order', order);
   }
 };
@@ -42,4 +42,12 @@ export const emitOrderStatusUpdate = (userId: string, order: any): void => {
     // Emit to admin room for status update
     io.to('admin-room').emit('admin:order-updated', order);
   }
+};
+
+export const emitNotification = (userId: string, notification: any): void => {
+  io?.to(`user-${userId}`).emit('notification:new', notification);
+};
+
+export const emitAdminNewOrder = (payload: any): void => {
+  io?.to('admin').emit('admin:new-order', payload);
 };

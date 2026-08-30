@@ -10,42 +10,42 @@ const MyOrdersPage = () => {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    // Check if user was redirected from Paddle payment success
     const status = searchParams.get('status');
     const transactionId = searchParams.get('transaction_id');
-    
+
     if (status === 'completed' && transactionId) {
-      // Verify payment and create order
       const savedBuildStr = localStorage.getItem('pendingPizzaBuild');
+
       if (savedBuildStr) {
         try {
           const savedBuild = JSON.parse(savedBuildStr);
           orderApi.verifyPayment({
-            transactionId: savedBuild.transactionId,
-            txRef: savedBuild.txRef,
-            items: savedBuild.items,
-            totalPrice: savedBuild.totalPrice,
+            transactionId: savedBuild.transactionId ?? transactionId,
           })
-          .then(() => {
-            localStorage.removeItem('pendingPizzaBuild');
-            dispatch(getMyOrders());
-            // Clear URL params
-            window.history.replaceState({}, '', '/orders');
-          })
-          .catch((err) => {
-            console.error('Payment verification failed:', err);
-            dispatch(getMyOrders());
-          });
+            .then(() => {
+              localStorage.removeItem('pendingPizzaBuild');
+              window.history.replaceState({}, '', '/orders');
+              dispatch(getMyOrders());
+            })
+            .catch((err) => {
+              console.error('Payment verification failed:', err);
+              localStorage.removeItem('pendingPizzaBuild');
+              dispatch(getMyOrders());
+            });
         } catch (e) {
           console.error('Error parsing saved build:', e);
+          localStorage.removeItem('pendingPizzaBuild');
           dispatch(getMyOrders());
         }
       } else {
         dispatch(getMyOrders());
       }
-    } else {
-      dispatch(getMyOrders());
+
+      window.history.replaceState({}, '', '/orders');
+      return;
     }
+
+    dispatch(getMyOrders());
   }, [dispatch, searchParams]);
 
   const getStatusColor = (status: string) => {
@@ -108,8 +108,9 @@ const MyOrdersPage = () => {
                     {order.status}
                   </span>
                   <p className="font-medium text-brand-choco-dark mt-2">
-                    ₹{order.totalPrice.toFixed(2)}
+                    ₹{(order.totalPrice ?? 0).toFixed(2)}
                   </p>
+                  <span className="mt-1 inline-block text-xs font-medium text-brand-orange">View Details</span>
                 </div>
               </div>
             </Link>

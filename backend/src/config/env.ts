@@ -14,8 +14,11 @@ const envSchema = z.object({
   EMAIL_USER: z.string(),
   EMAIL_PASSWORD: z.string(),
   EMAIL_FROM: z.string(),
-  PADDLE_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
-  PADDLE_SANDBOX_API_KEY: z.string(),
+  PADDLE_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+  PADDLE_ENVIRONMENT: z.enum(['sandbox', 'production']).optional(),
+  PADDLE_API_KEY: z.string().optional(),
+  PADDLE_WEBHOOK_SECRET: z.string().optional(),
+  PADDLE_SANDBOX_API_KEY: z.string().optional(),
   PADDLE_SANDBOX_WEBHOOK_SECRET: z.string().optional(),
   PADDLE_PRODUCTION_API_KEY: z.string().optional(),
   PADDLE_PRODUCTION_WEBHOOK_SECRET: z.string().optional(),
@@ -29,4 +32,11 @@ if (!parsedEnv.success) {
   process.exit(1);
 }
 
-export const env = parsedEnv.data;
+const normalizedEnv = {
+  ...parsedEnv.data,
+  PADDLE_ENVIRONMENT: parsedEnv.data.PADDLE_ENVIRONMENT ?? parsedEnv.data.PADDLE_ENV,
+  PADDLE_API_KEY: parsedEnv.data.PADDLE_API_KEY || parsedEnv.data.PADDLE_SANDBOX_API_KEY || parsedEnv.data.PADDLE_PRODUCTION_API_KEY || '',
+  PADDLE_WEBHOOK_SECRET: parsedEnv.data.PADDLE_WEBHOOK_SECRET || parsedEnv.data.PADDLE_SANDBOX_WEBHOOK_SECRET || parsedEnv.data.PADDLE_PRODUCTION_WEBHOOK_SECRET || '',
+};
+
+export const env = normalizedEnv;

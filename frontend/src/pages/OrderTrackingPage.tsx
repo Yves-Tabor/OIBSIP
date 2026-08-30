@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks/useAuth';
 import { getOrderById } from '../features/order/orderSlice';
@@ -79,7 +79,10 @@ const OrderTrackingPage = () => {
               Order Details
             </h2>
             <div className="space-y-4">
-              {currentOrder.items.map((item, index) => (
+              <Link to={`/orders/${currentOrder._id}`} className="inline-block text-sm font-medium text-brand-orange hover:text-brand-choco">
+                View Full Order Details
+              </Link>
+              {(currentOrder.items || []).map((item, index) => (
                 <div key={index} className="border-b border-brand-border pb-4 last:border-0">
                   <p className="font-medium text-brand-choco-dark">
                     Base: {item.base}
@@ -87,16 +90,16 @@ const OrderTrackingPage = () => {
                   <p className="text-brand-text-secondary">Sauce: {item.sauce}</p>
                   <p className="text-brand-text-secondary">Cheese: {item.cheese}</p>
                   <p className="text-brand-text-secondary">
-                    Vegetables: {item.vegetables.join(', ')}
+                    Vegetables: {item.vegetables?.join(', ') || 'None'}
                   </p>
                   <p className="text-brand-orange font-medium mt-2">
-                    ₹{item.price.toFixed(2)}
+                    ₹{(item.price ?? 0).toFixed(2)}
                   </p>
                 </div>
               ))}
               <div className="pt-4 border-t border-brand-border">
                 <p className="font-heading text-lg font-bold text-brand-choco-dark">
-                  Total: ₹{currentOrder.totalPrice.toFixed(2)}
+                  Total: ₹{(currentOrder.totalPrice ?? 0).toFixed(2)}
                 </p>
               </div>
             </div>

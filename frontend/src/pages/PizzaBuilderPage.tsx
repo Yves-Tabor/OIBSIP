@@ -20,10 +20,11 @@ import { Sparkles, ShoppingBag, ArrowRight, ArrowLeft, RefreshCw, Check, Loader2
 declare global {
   interface Window {
     Paddle: {
+      Initialized?: boolean;
       Environment: {
         set: (env: 'sandbox' | 'production') => void;
       };
-      Initialize: (options: { token: string }) => void;
+      Initialize: (options: { token: string; eventCallback?: (data: any) => void }) => void;
       Checkout: {
         open: (options: {
           transactionId: string;
@@ -49,6 +50,7 @@ declare global {
 }
 
 const PLACEHOLDER = 'https://placehold.co/400x300/FDE8D4/6B3520?text=Ingredient';
+let paddleInitialized = false;
 
 const PizzaBuilderPage = () => {
   const dispatch = useAppDispatch();
@@ -61,7 +63,9 @@ const PizzaBuilderPage = () => {
   const [options, setOptions] = useState<PizzaOptions | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const checkoutHandledRef = useRef(false);
 
   // Refs for auto-centering active step on mobile
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -87,62 +91,86 @@ const PizzaBuilderPage = () => {
       ? import.meta.env.VITE_PADDLE_SANDBOX_CLIENT_TOKEN 
       : import.meta.env.VITE_PADDLE_PRODUCTION_CLIENT_TOKEN;
 
-    if (!window.Paddle) {
-      // Load Paddle.js script
-      const script = document.createElement('script');
-      script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
-      script.async = true;
-      script.onload = () => {
-        if (window.Paddle) {
-          window.Paddle.Environment.set(paddleEnvironment as 'sandbox' | 'production');
-          window.Paddle.Initialize({
-            token: paddleToken,
-          });
-          console.log('Paddle.js initialized');
-        }
-      };
-      document.body.appendChild(script);
-    } else {
-      // Paddle.js already loaded, just initialize
-      window.Paddle.Environment.set(paddleEnvironment as 'sandbox' | 'production');
-      window.Paddle.Initialize({
-        token: paddleToken,
-      });
-      console.log('Paddle.js re-initialized');
-    }
+    const pollForOrder = async (transactionId: string, txRef: string) => {
+      const startedAt = Date.now();
+      const deadline = startedAt + 20000;
+      let initialOrderCount: number | null = null;
 
-    // Add event listener for checkout completion
+      while (Date.now() < deadline) {
+        try {
+          const response = await orderApi.getMyOrders();
+          initialOrderCount ??= response.data.length;
+          const matchingOrder = response.data.find((order: any) => (
+            order.paymentId === transactionId ||
+            order.txRef === txRef
+          ));
+
+          if (matchingOrder && response.data.length >= initialOrderCount) {
+            dispatch(clearCart());
+            localStorage.removeItem('pendingPizzaBuild');
+            setCheckoutLoading(false);
+            setCheckoutSuccess(false);
+            navigate(`/orders/${matchingOrder._id}`, { replace: true });
+            return;
+          }
+        } catch (error) {
+          console.error('Polling for order failed:', error);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+
+      setCheckoutLoading(false);
+      setCheckoutSuccess(false);
+      navigate('/orders', { replace: true });
+    };
+
     const handleCheckoutComplete = (data: any) => {
       console.log('Paddle checkout completed:', data);
+      if (data?.name && data.name !== 'checkout.completed') return;
+      if (checkoutHandledRef.current) return;
+      checkoutHandledRef.current = true;
       setCheckoutLoading(true);
-      
+      setCheckoutSuccess(true);
+
       const savedBuildStr = localStorage.getItem('pendingPizzaBuild');
       if (savedBuildStr) {
         try {
           const savedBuild = JSON.parse(savedBuildStr);
-          
+          const transactionId = data?.data?.transaction_id || data?.transaction_id || savedBuild.transactionId;
+          const txRef = savedBuild.txRef;
+
           orderApi.verifyPayment({
-            transactionId: savedBuild.transactionId,
-            txRef: savedBuild.txRef,
-            items: savedBuild.items,
-            totalPrice: savedBuild.totalPrice,
+            transactionId,
           })
-          .then((res) => {
-            setCheckoutLoading(false);
-            dispatch(clearCart());
-            localStorage.removeItem('pendingPizzaBuild');
-            
-            // Redirect to orders page
-            navigate('/orders');
-          })
-          .catch((err) => {
-            setCheckoutLoading(false);
-            setErrorMessage(err.response?.data?.message || 'Payment verification failed. Please contact customer support.');
-          });
+            .then(() => {
+              if (transactionId && txRef) {
+                void pollForOrder(transactionId, txRef);
+              }
+            })
+            .catch((err) => {
+              if (err.response?.status === 202) {
+                const transactionId = data?.data?.transaction_id || data?.transaction_id || savedBuild.transactionId;
+                const txRef = savedBuild.txRef;
+                if (transactionId && txRef) {
+                  void pollForOrder(transactionId, txRef);
+                  return;
+                }
+              }
+
+              setCheckoutLoading(false);
+              setCheckoutSuccess(false);
+              setErrorMessage(err.response?.data?.message || 'Payment verification failed. Please contact customer support.');
+            });
         } catch (e) {
           setCheckoutLoading(false);
+          setCheckoutSuccess(false);
           setErrorMessage('Could not load order details. Please contact customer support.');
         }
+      } else {
+        setCheckoutLoading(false);
+        setCheckoutSuccess(false);
+        navigate('/orders', { replace: true });
       }
     };
 
@@ -154,17 +182,42 @@ const PizzaBuilderPage = () => {
       setCheckoutLoading(false);
     };
 
-    if (window.Paddle && window.Paddle.Event) {
-      // Paddle.js v2 uses different event names
-      window.Paddle.Event.addListener('checkout.completed', handleCheckoutComplete);
+    const registerPaddleListeners = () => {
+      if (!window.Paddle || !window.Paddle.Event) return;
+
       window.Paddle.Event.addListener('checkout.closed', handleCheckoutClose);
       console.log('Paddle event listeners registered');
+    };
+
+    if (!window.Paddle) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+      script.async = true;
+      script.onload = () => {
+        if (window.Paddle) {
+          window.Paddle.Environment.set(paddleEnvironment as 'sandbox' | 'production');
+          if (!window.Paddle.Initialized && !paddleInitialized) {
+            window.Paddle.Initialize({ token: paddleToken, eventCallback: handleCheckoutComplete });
+            paddleInitialized = true;
+          }
+          registerPaddleListeners();
+          console.log('Paddle.js initialized');
+        }
+      };
+      document.body.appendChild(script);
+    } else {
+      window.Paddle.Environment.set(paddleEnvironment as 'sandbox' | 'production');
+      if (!window.Paddle.Initialized && !paddleInitialized) {
+        window.Paddle.Initialize({ token: paddleToken, eventCallback: handleCheckoutComplete });
+        paddleInitialized = true;
+      }
+      registerPaddleListeners();
+      console.log('Paddle.js re-initialized');
     }
 
     return () => {
       if (window.Paddle && window.Paddle.Event) {
-        window.Paddle.Event.removeListener('checkoutComplete', handleCheckoutComplete);
-        window.Paddle.Event.removeListener('checkoutClosed', handleCheckoutClose);
+        window.Paddle.Event.removeListener('checkout.closed', handleCheckoutClose);
       }
     };
   }, [dispatch, navigate]);
@@ -180,22 +233,16 @@ const PizzaBuilderPage = () => {
       
       if (savedBuildStr) {
         try {
-          const savedBuild = JSON.parse(savedBuildStr);
+          JSON.parse(savedBuildStr);
           
           orderApi.verifyPayment({
-            transactionId: transactionId,
-            txRef: savedBuild.txRef,
-            items: savedBuild.items,
-            totalPrice: savedBuild.totalPrice,
+            transactionId,
           })
-          .then((res) => {
+          .then(() => {
             setCheckoutLoading(false);
             dispatch(clearCart());
             localStorage.removeItem('pendingPizzaBuild');
-            
-            // Redirect to tracking page
-            const orderId = res.data.order._id;
-            navigate(`/orders/${orderId}`);
+            navigate('/orders');
           })
           .catch((err) => {
             setCheckoutLoading(false);
@@ -314,12 +361,16 @@ const PizzaBuilderPage = () => {
       if (window.Paddle && window.Paddle.Checkout) {
         window.Paddle.Checkout.open({
           transactionId: response.data.transactionId,
+          customer: {
+            email: 'customer@example.com',
+            name: 'Customer',
+          },
           settings: {
             displayMode: 'overlay',
             theme: 'light',
             variant: 'multi-page',
-            successUrl: `${window.location.origin}/orders?status=completed&transaction_id=${response.data.transactionId}`,
           },
+          successUrl: `${window.location.origin}/orders?status=completed&transaction_id=${response.data.transactionId}`,
         });
         setCheckoutLoading(false);
       } else {
@@ -339,7 +390,9 @@ const PizzaBuilderPage = () => {
       {checkoutLoading && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center text-white">
           <Loader2 className="animate-spin text-brand-orange mb-4" size={48} />
-          <p className="text-lg font-semibold tracking-wide">Processing Secure Payment Callback...</p>
+          <p className="text-lg font-semibold tracking-wide">
+            {checkoutSuccess ? 'Payment successful! Finalizing your order...' : 'Processing Secure Payment Callback...'}
+          </p>
           <p className="text-xs text-brand-text-placeholder mt-2">Do not refresh or close this window.</p>
         </div>
       )}

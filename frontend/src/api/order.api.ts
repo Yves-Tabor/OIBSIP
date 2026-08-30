@@ -5,12 +5,7 @@ export const orderApi = {
   initializePayment: (data: { items: any[]; totalPrice: number }): Promise<{ data: { txRef: string; transactionId: string } }> =>
     api.post('/orders/initialize-payment', data),
   
-  verifyPayment: (data: {
-    transactionId: string;
-    txRef: string;
-    items: any[];
-    totalPrice: number;
-  }): Promise<{ data: { message: string; order: Order } }> =>
+  verifyPayment: (data: { transactionId: string }): Promise<{ data: { success: boolean; message: string } }> =>
     api.post('/orders/verify-payment', data),
   
   getMyOrders: (): Promise<{ data: Order[] }> =>

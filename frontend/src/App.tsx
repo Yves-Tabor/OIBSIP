@@ -15,10 +15,11 @@ import MyOrdersPage from './pages/MyOrdersPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminInventoryPage from './pages/admin/AdminInventoryPage';
+import OrderDetailPage from './pages/OrderDetailPage';
 
 function App() {
   const dispatch = useAppDispatch();
-  const { isAuthenticated, user, token } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, token } = useAppSelector((state) => state.auth);
   const location = useLocation();
   const showFooter = !['/login', '/register', '/forgot-password'].includes(location.pathname)
     && !location.pathname.startsWith('/reset-password');
@@ -58,6 +59,14 @@ function App() {
           />
           <Route
             path="/orders/:id"
+            element={
+              <ProtectedRoute>
+                <OrderDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/orders/:id/tracking"
             element={
               <ProtectedRoute>
                 <OrderTrackingPage />

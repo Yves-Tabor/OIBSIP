@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu as HamburgerIcon, X, User as UserIcon, LogOut, Shield, Mail, CheckCircle } from 'lucide-react';
+import { Menu as HamburgerIcon, X, User as UserIcon, LogOut, Shield, Mail, CheckCircle, Bell } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../hooks/useAuth';
 import { logout } from '../../features/auth/authSlice';
+import { deleteNotifications, getNotifications, markNotificationsRead } from '../../features/notification/notificationSlice';
+import { useSocket } from '../../hooks/useSocket';
 
 const Navbar = () => {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
@@ -11,12 +13,37 @@ const Navbar = () => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserOpen, setIsUserOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const { items: notifications } = useAppSelector((state) => state.notifications);
+  const unreadCount = notifications.filter((notification) => !notification.read && (user?.role !== 'admin' || notification.type === 'order')).length;
+  useSocket(isAuthenticated ? user?.id : undefined, user?.role === 'admin');
 
   // Automatically close dropdowns on route changes
   useEffect(() => {
     setIsMenuOpen(false);
     setIsUserOpen(false);
+    setIsNotificationsOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (isAuthenticated) dispatch(getNotifications());
+  }, [dispatch, isAuthenticated]);
+
+  useEffect(() => {
+    if (user?.role === 'admin' && location.pathname === '/admin/orders') {
+      dispatch(markNotificationsRead());
+    }
+  }, [dispatch, location.pathname, user?.role]);
+
+  const timeAgo = (date: string) => {
+    const seconds = Math.max(1, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  };
 
   const handleLogout = () => {
     dispatch(logout());
@@ -55,21 +82,17 @@ const Navbar = () => {
           {/* RIGHT SECTION: User Profile or Quick Auth Links */}
           <div className="flex items-center justify-end w-1/3">
             {isAuthenticated ? (
-              /* User Icon (when authenticated) */
-              <button
-                onClick={() => {
-                  setIsUserOpen(!isUserOpen);
-                  setIsMenuOpen(false);
-                }}
-                className={`p-2 rounded-md transition-all duration-200 ${
-                  isUserOpen
-                    ? 'text-brand-orange bg-brand-orange-pale'
-                    : 'text-brand-text-secondary hover:text-brand-choco hover:bg-brand-surface'
-                }`}
-                aria-label="Toggle user profile info"
-              >
-                <UserIcon size={22} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => { setIsNotificationsOpen(!isNotificationsOpen); setIsUserOpen(false); setIsMenuOpen(false); }} className="relative rounded-md p-2 text-brand-text-secondary hover:bg-brand-surface hover:text-brand-choco" aria-label="Notifications">
+                  <Bell size={21} />
+                  {unreadCount > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-red-600 px-1 text-center text-[10px] leading-4 text-white">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+                </button>
+                <button
+                  onClick={() => { setIsUserOpen(!isUserOpen); setIsNotificationsOpen(false); setIsMenuOpen(false); }}
+                  className={`rounded-md p-2 transition-all duration-200 ${isUserOpen ? 'bg-brand-orange-pale text-brand-orange' : 'text-brand-text-secondary hover:bg-brand-surface hover:text-brand-choco'}`}
+                  aria-label="Toggle user profile info"
+                ><UserIcon size={22} /></button>
+              </div>
             ) : (
               <div className="hidden sm:flex items-center space-x-4">
                 <Link
@@ -205,6 +228,25 @@ const Navbar = () => {
             </button>
           </div>
         </>
+      )}
+
+      {isNotificationsOpen && isAuthenticated && (
+        <div className="absolute right-4 top-16 z-50 w-80 rounded-md border border-brand-border bg-white p-4 shadow-xl sm:right-8">
+          <div className="mb-3 flex items-center justify-between border-b border-brand-border pb-2">
+            <h3 className="font-heading font-semibold text-brand-choco-dark">Notifications</h3>
+            <div className="flex items-center gap-2 text-xs">
+              <button onClick={() => dispatch(markNotificationsRead())} className="text-brand-orange hover:text-brand-choco">Mark all read</button>
+              {notifications.length > 0 && <><span className="h-4 border-l border-brand-border" /><button onClick={() => dispatch(deleteNotifications())} className="text-red-500 hover:text-red-700">Delete all</button></>}
+            </div>
+          </div>
+          <div className="max-h-80 space-y-2 overflow-y-auto">
+            {notifications.length === 0 ? <p className="py-4 text-sm text-brand-text-muted">No notifications</p> : notifications.map((notification) => (
+              <div key={notification._id} className={`rounded p-2 text-sm ${notification.read ? 'bg-brand-surface text-brand-text-secondary' : 'bg-brand-orange-pale text-brand-choco'}`}>
+                <p>{notification.message}</p><span className="text-xs opacity-70">{timeAgo(notification.createdAt)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
     </nav>
