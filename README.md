@@ -183,25 +183,3 @@ Alternatively, you can create a script to seed an admin user during development.
 
 **Environment Variables:** Ensure all required environment variables are set in both backend and frontend .env files before running the application.
 
-## Production Deployment
-
-For production deployment:
-
-1. **Backend:**
-   - Set `NODE_ENV=production` in .env
-   - Use a production MongoDB instance (MongoDB Atlas recommended)
-   - Update JWT_SECRET to a strong, random value
-   - Set `PADDLE_ENVIRONMENT=production` and use production Paddle credentials
-   - Configure proper CORS settings for your domain
-   - Use a process manager like PM2: `pm2 start dist/main.js`
-
-2. **Frontend:**
-   - Update VITE_API_URL to your production backend URL
-   - Build the application: `pnpm run build`
-   - Deploy the dist folder to a static hosting service (Vercel, Netlify, etc.)
-
-3. **Security:**
-   - Enable HTTPS for both frontend and backend
-   - Use environment-specific configurations
-   - Implement rate limiting
-   - Set up proper logging and monitoring
