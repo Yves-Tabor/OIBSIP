@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Pizza, Clock, Truck } from 'lucide-react';
 import welcomeIMG from "../img/welcomeIMG.png";
+import { useAppSelector } from '../hooks/useAuth';
 
 const LandingPage = () => {
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+
   return (
     <div className="animate-fade-in">
       <section className="bg-brand-cream py-20">
@@ -18,18 +21,29 @@ const LandingPage = () => {
                 Build your perfect pizza with our premium ingredients. From hand-tossed dough to fresh toppings, every bite is a masterpiece.
               </p>
               <div className="mt-8 flex space-x-4 animate-fade-up" style={{ animationDelay: '0.2s' }}>
-                <Link
-                  to="/register"
-                  className="bg-brand-orange text-white px-6 py-3 rounded-sm text-sm font-medium hover:bg-brand-orange-light hover:scale-105 transition-all duration-200"
-                >
-                  Get Started
-                </Link>
-                <Link
-                  to="/login"
-                  className="border border-brand-choco text-brand-choco px-6 py-3 rounded-sm text-sm font-medium hover:bg-brand-cream hover:scale-105 transition-all duration-200"
-                >
-                  Login
-                </Link>
+                {isAuthenticated ? (
+                  <Link
+                    to="/menu"
+                    className="bg-brand-orange text-white px-6 py-3 rounded-sm text-sm font-medium hover:bg-brand-orange-light hover:scale-105 transition-all duration-200"
+                  >
+                    Order something -&gt;
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      to="/register"
+                      className="bg-brand-orange text-white px-6 py-3 rounded-sm text-sm font-medium hover:bg-brand-orange-light hover:scale-105 transition-all duration-200"
+                    >
+                      Get Started
+                    </Link>
+                    <Link
+                      to="/login"
+                      className="border border-brand-choco text-brand-choco px-6 py-3 rounded-sm text-sm font-medium hover:bg-brand-cream hover:scale-105 transition-all duration-200"
+                    >
+                      Login
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex items-center justify-center animate-fade-up" style={{ animationDelay: '0.3s' }}>

@@ -66,6 +66,7 @@ const PizzaBuilderPage = () => {
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const checkoutHandledRef = useRef(false);
+  const paddleReadyRef = useRef<Promise<void> | null>(null);
 
   // Refs for auto-centering active step on mobile
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -90,6 +91,11 @@ const PizzaBuilderPage = () => {
     const paddleToken = paddleEnvironment === 'sandbox' 
       ? import.meta.env.VITE_PADDLE_SANDBOX_CLIENT_TOKEN 
       : import.meta.env.VITE_PADDLE_PRODUCTION_CLIENT_TOKEN;
+
+    if (!paddleToken) {
+      setErrorMessage('Paddle client token is missing. Check the VITE_PADDLE_*_CLIENT_TOKEN setting.');
+      return;
+    }
 
     const pollForOrder = async (transactionId: string, txRef: string) => {
       const startedAt = Date.now();
@@ -127,7 +133,6 @@ const PizzaBuilderPage = () => {
 
     const handleCheckoutComplete = (data: any) => {
       console.log('Paddle checkout completed:', data);
-      if (data?.name && data.name !== 'checkout.completed') return;
       if (checkoutHandledRef.current) return;
       checkoutHandledRef.current = true;
       setCheckoutLoading(true);
@@ -174,6 +179,20 @@ const PizzaBuilderPage = () => {
       }
     };
 
+    const handlePaddleEvent = (data: any) => {
+      if (data?.name === 'checkout.completed') {
+        handleCheckoutComplete(data);
+        return;
+      }
+
+      if (data?.name === 'checkout.error') {
+        console.error('Paddle checkout error:', data.detail || data);
+        setCheckoutLoading(false);
+        setCheckoutSuccess(false);
+        setErrorMessage(data.detail || 'Paddle could not open checkout. Please try again.');
+      }
+    };
+
     const handleCheckoutClose = (data: any) => {
       console.log('Paddle checkout closed:', data);
       if (data && !data.checkout_completed) {
@@ -189,31 +208,42 @@ const PizzaBuilderPage = () => {
       console.log('Paddle event listeners registered');
     };
 
-    if (!window.Paddle) {
+    paddleReadyRef.current = new Promise<void>((resolve, reject) => {
+      const initialize = () => {
+        if (!window.Paddle) {
+          reject(new Error('Paddle.js did not load'));
+          return;
+        }
+
+        window.Paddle.Environment.set(paddleEnvironment as 'sandbox' | 'production');
+        if (!window.Paddle.Initialized && !paddleInitialized) {
+          window.Paddle.Initialize({ token: paddleToken, eventCallback: handlePaddleEvent });
+          paddleInitialized = true;
+        }
+        registerPaddleListeners();
+        console.log('Paddle.js initialized');
+        resolve();
+      };
+
+      if (window.Paddle) {
+        initialize();
+        return;
+      }
+
+      const existingScript = document.querySelector<HTMLScriptElement>('script[src="https://cdn.paddle.com/paddle/v2/paddle.js"]');
+      if (existingScript) {
+        existingScript.addEventListener('load', initialize, { once: true });
+        existingScript.addEventListener('error', () => reject(new Error('Paddle.js did not load')), { once: true });
+        return;
+      }
+
       const script = document.createElement('script');
       script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
       script.async = true;
-      script.onload = () => {
-        if (window.Paddle) {
-          window.Paddle.Environment.set(paddleEnvironment as 'sandbox' | 'production');
-          if (!window.Paddle.Initialized && !paddleInitialized) {
-            window.Paddle.Initialize({ token: paddleToken, eventCallback: handleCheckoutComplete });
-            paddleInitialized = true;
-          }
-          registerPaddleListeners();
-          console.log('Paddle.js initialized');
-        }
-      };
+      script.onload = initialize;
+      script.onerror = () => reject(new Error('Paddle.js did not load'));
       document.body.appendChild(script);
-    } else {
-      window.Paddle.Environment.set(paddleEnvironment as 'sandbox' | 'production');
-      if (!window.Paddle.Initialized && !paddleInitialized) {
-        window.Paddle.Initialize({ token: paddleToken, eventCallback: handleCheckoutComplete });
-        paddleInitialized = true;
-      }
-      registerPaddleListeners();
-      console.log('Paddle.js re-initialized');
-    }
+    });
 
     return () => {
       if (window.Paddle && window.Paddle.Event) {
@@ -333,6 +363,9 @@ const PizzaBuilderPage = () => {
     try {
       setCheckoutLoading(true);
       setErrorMessage(null);
+      checkoutHandledRef.current = false;
+
+      await paddleReadyRef.current;
 
       const pizzaItem = {
         base: base.name,

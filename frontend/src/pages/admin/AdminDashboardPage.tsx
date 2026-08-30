@@ -42,7 +42,10 @@ const AdminDashboardPage = () => {
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 animate-fade-in">
       <div className="mb-8 flex items-center justify-between gap-4">
         <div><h1 className="font-heading text-3xl font-bold text-brand-choco-dark">Admin Dashboard</h1><p className="mt-1 text-sm text-brand-text-secondary">Financial progress and order health</p></div>
-        <Link to="/admin/orders" className="inline-flex items-center gap-2 rounded-sm bg-brand-orange px-4 py-2 text-sm font-semibold text-white"><ClipboardList size={17} /> Orders</Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link to="/admin/orders" className="inline-flex items-center gap-2 rounded-sm bg-brand-orange px-4 py-2 text-sm font-semibold text-white"><ClipboardList size={17} /> Orders</Link>
+          <Link to="/admin/inventory" className="inline-flex items-center gap-2 rounded-sm border border-brand-choco px-4 py-2 text-sm font-semibold text-brand-choco hover:bg-brand-cream"><Package size={17} /> Manage Store</Link>
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{stats.map(([label, value]) => <div key={label} className="rounded-md border border-brand-border bg-brand-surface p-5"><p className="text-sm text-brand-text-secondary">{label}</p><p className="mt-2 font-heading text-2xl font-bold text-brand-choco-dark">{value}</p></div>)}</div>
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
