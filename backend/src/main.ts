@@ -18,14 +18,20 @@ const app = express();
 const httpServer = createServer(app);
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: env.FRONTEND_URL,
+    origin: [
+      'http://localhost:5173',
+      'https://dailypizza-seven.vercel.app'
+    ],
     credentials: true,
   },
 });
 
 // Middleware
 app.use(cors({
-  origin: env.FRONTEND_URL,
+  origin: [
+    'http://localhost:5173',
+    'https://dailypizza-seven.vercel.app'
+  ],
   credentials: true,
 }));
 

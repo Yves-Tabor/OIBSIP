@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: dailypizza-backend
+    env: node
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm build
+    startCommand: pnpm start
