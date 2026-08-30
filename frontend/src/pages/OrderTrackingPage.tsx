@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks/useAuth';
 import { getOrderById } from '../features/order/orderSlice';
 import { useSocket } from '../hooks/useSocket';
+import { OrderItem } from '../types';
 
 const OrderTrackingPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -82,7 +83,7 @@ const OrderTrackingPage = () => {
               <Link to={`/orders/${currentOrder._id}`} className="inline-block text-sm font-medium text-brand-orange hover:text-brand-choco">
                 View Full Order Details
               </Link>
-              {(currentOrder.items || []).map((item, index) => (
+              {(currentOrder.items || []).map((item: OrderItem, index: number) => (
                 <div key={index} className="border-b border-brand-border pb-4 last:border-0">
                   <p className="font-medium text-brand-choco-dark">
                     Base: {item.base}

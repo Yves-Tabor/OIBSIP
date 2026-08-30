@@ -1,6 +1,6 @@
 import { configureStore, type ThunkDispatch } from '@reduxjs/toolkit';
 import { useDispatch, useSelector } from 'react-redux';
-import type { UnknownAction } from 'redux';
+import type { UnknownAction } from '@reduxjs/toolkit';
 import authReducer from '../features/auth/authSlice';
 import cartReducer from '../features/cart/cartSlice';
 import orderReducer from '../features/order/orderSlice';

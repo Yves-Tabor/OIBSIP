@@ -137,7 +137,7 @@ const AdminInventoryPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-border">
-              {items.map((item) => (
+              {items.map((item: InventoryItem) => (
                 <tr key={item._id} className="hover:bg-brand-cream transition-colors duration-150">
                   <td className="px-4 py-3">
                     {item.imageUrl ? (

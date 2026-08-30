@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks/useAuth';
 import { getOrderById } from '../features/order/orderSlice';
 import { useSocket } from '../hooks/useSocket';
+import { OrderItem } from '../types';
 
 const OrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,7 +26,7 @@ const OrderDetailPage = () => {
         <span className="rounded bg-brand-orange-pale px-3 py-1 text-sm font-medium text-brand-choco">{currentOrder.status}</span>
       </div>
       <div className="space-y-4 rounded-md border border-brand-border bg-brand-surface p-6">
-        {(currentOrder.items || []).map((item, index) => (
+        {(currentOrder.items || []).map((item: OrderItem, index: number) => (
           <div key={index} className="border-b border-brand-border pb-4 last:border-0">
             <div className="flex justify-between gap-4"><h2 className="font-medium text-brand-choco-dark">Pizza {index + 1}</h2><span className="text-sm text-brand-text-secondary">Qty: {item.quantity ?? 1}</span></div>
             <p className="mt-2 text-sm text-brand-text-secondary">Base: {item.base} · Sauce: {item.sauce} · Cheese: {item.cheese}</p>

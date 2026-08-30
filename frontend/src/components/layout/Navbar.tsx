@@ -5,6 +5,7 @@ import { useAppSelector, useAppDispatch } from '../../hooks/useAuth';
 import { logout } from '../../features/auth/authSlice';
 import { deleteNotifications, getNotifications, markNotificationsRead } from '../../features/notification/notificationSlice';
 import { useSocket } from '../../hooks/useSocket';
+import { Notification } from '../../api/notification.api';
 
 const Navbar = () => {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
@@ -15,7 +16,7 @@ const Navbar = () => {
   const [isUserOpen, setIsUserOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { items: notifications } = useAppSelector((state) => state.notifications);
-  const unreadCount = notifications.filter((notification) => !notification.read && (user?.role !== 'admin' || notification.type === 'order')).length;
+  const unreadCount = notifications.filter((notification: Notification) => !notification.read && (user?.role !== 'admin' || notification.type === 'order')).length;
   useSocket(isAuthenticated ? user?.id : undefined, user?.role === 'admin');
 
   // Automatically close dropdowns on route changes
@@ -240,7 +241,7 @@ const Navbar = () => {
             </div>
           </div>
           <div className="max-h-80 space-y-2 overflow-y-auto">
-            {notifications.length === 0 ? <p className="py-4 text-sm text-brand-text-muted">No notifications</p> : notifications.map((notification) => (
+            {notifications.length === 0 ? <p className="py-4 text-sm text-brand-text-muted">No notifications</p> : notifications.map((notification: Notification) => (
               <div key={notification._id} className={`rounded p-2 text-sm ${notification.read ? 'bg-brand-surface text-brand-text-secondary' : 'bg-brand-orange-pale text-brand-choco'}`}>
                 <p>{notification.message}</p><span className="text-xs opacity-70">{timeAgo(notification.createdAt)}</span>
               </div>

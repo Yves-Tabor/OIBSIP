@@ -337,7 +337,7 @@ const PizzaBuilderPage = () => {
   const handleToppingToggle = (option: PizzaOption) => {
     if (!option.inStock) return;
     
-    const isSelected = vegetables.some((v) => v.name === option.name);
+    const isSelected = vegetables.some((v: PizzaOption) => v.name === option.name);
     if (isSelected) {
       dispatch(removeVegetable(option.name));
     } else {
@@ -357,7 +357,7 @@ const PizzaBuilderPage = () => {
     if (currentStep === 0) return base?.name === option.name;
     if (currentStep === 1) return sauce?.name === option.name;
     if (currentStep === 2) return cheese?.name === option.name;
-    return vegetables.some((v) => v.name === option.name);
+    return vegetables.some((v: PizzaOption) => v.name === option.name);
   };
 
   const isCurrentStepValid = (): boolean => {
@@ -381,7 +381,7 @@ const PizzaBuilderPage = () => {
         base: base.name,
         sauce: sauce.name,
         cheese: cheese.name,
-        vegetables: vegetables.map((v) => v.name),
+        vegetables: vegetables.map((v: PizzaOption) => v.name),
         quantity: 1,
       };
 
@@ -695,13 +695,13 @@ const PizzaBuilderPage = () => {
                     <p className="font-semibold text-brand-text-primary">Toppings</p>
                     <p className="text-xs text-brand-text-muted">
                       {vegetables.length > 0
-                        ? vegetables.map((v) => v.name).join(', ')
+                        ? vegetables.map((v: PizzaOption) => v.name).join(', ')
                         : 'No toppings selected'}
                     </p>
                   </div>
                   <span className="font-mono text-brand-choco-dark font-medium">
                     {vegetables.length > 0
-                      ? `$${vegetables.reduce((sum, v) => sum + v.price, 0).toFixed(2)}`
+                      ? `$${vegetables.reduce((sum: number, v: PizzaOption) => sum + v.price, 0).toFixed(2)}`
                       : '--'}
                   </span>
                 </div>

@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../hooks/useAuth';
 import { getMyOrders } from '../features/order/orderSlice';
 import { orderApi } from '../api/order.api';
 import { parsePendingPizzaBuild } from '../utils/storage';
+import { Order } from '../types';
 
 const MyOrdersPage = () => {
   const dispatch = useAppDispatch();
@@ -86,7 +87,7 @@ const MyOrdersPage = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => (
+          {orders.map((order: Order) => (
             <Link
               key={order._id}
               to={`/orders/${order._id}`}
