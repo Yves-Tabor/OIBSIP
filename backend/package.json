@@ -10,7 +10,6 @@
     "lint": "eslint src --ext .ts",
     "test": "tsx --test src/**/*.test.ts"
   },
-  "packageManager": "pnpm@8.15.0",
   "keywords": [
     "pizza",
     "delivery",
