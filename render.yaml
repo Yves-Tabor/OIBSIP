@@ -9,14 +9,15 @@ services:
       - key: NODE_VERSION
         value: 24.14.1
 
-sites:
-  - type: static
+  - type: web
     name: dailypizza-frontend
-    rootDir: frontend
+    env: node
+    rootDirectory: frontend
     buildCommand: npm install && npm run build
-    publishDir: dist
-    nodeVersion: 24.14.1
+    startCommand: npx serve dist -l 3000
     envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
       - key: VITE_API_URL
         value: https://dailypizza-backend.onrender.com/api
       - key: VITE_SOCKET_URL
