@@ -8,3 +8,19 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 24.14.1
+
+sites:
+  - type: static
+    name: dailypizza-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://dailypizza-backend.onrender.com/api
+      - key: VITE_SOCKET_URL
+        value: https://dailypizza-backend.onrender.com
+      - key: VITE_PADDLE_ENVIRONMENT
+        value: sandbox
+      - key: VITE_PADDLE_SANDBOX_CLIENT_TOKEN
+        value: test_b287a76147a4f657c919e690a61
