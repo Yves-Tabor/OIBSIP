@@ -15,6 +15,7 @@ sites:
     rootDir: frontend
     buildCommand: npm install && npm run build
     publishDir: dist
+    nodeVersion: 24.14.1
     envVars:
       - key: VITE_API_URL
         value: https://dailypizza-backend.onrender.com/api
