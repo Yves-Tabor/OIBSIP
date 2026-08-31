@@ -13,6 +13,7 @@ const paddle = new Paddle(env.PADDLE_API_KEY);
 
 export const handlePaddleWebhook = async (req: Request, res: Response): Promise<void> => {
   try {
+    // Parse raw body from request
     const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}));
     const signature = req.headers['paddle-signature'] as string | undefined;
     const secret = env.PADDLE_WEBHOOK_SECRET;
