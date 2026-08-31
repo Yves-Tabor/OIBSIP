@@ -97,7 +97,7 @@ export const handlePaddleWebhook = async (req: Request, res: Response): Promise<
       });
       emitNotification(userId, userNotification);
 
-      // Create notifications for all admins
+      // Create notifications for all admins about new order
       const admins = await User.find({ role: 'admin' }, '_id');
       for (const admin of admins) {
         const adminNotification = await Notification.create({
