@@ -24,6 +24,8 @@ export const handlePaddleWebhook = async (req: Request, res: Response): Promise<
       return;
     }
 
+    // Validate webhook signature
+
     const isValid = paddle.webhooks.isSignatureValid(rawBody.toString('utf8'), secret, signature);
     if (!isValid) {
       console.error('Invalid Paddle webhook signature');
