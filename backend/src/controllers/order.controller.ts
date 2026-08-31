@@ -131,6 +131,7 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
     order.status = status;
     await order.save();
 
+    // Create notification for user about status update
     const notification = await Notification.create({
       user: order.user,
       message: `Your order #${order._id.toString().slice(-6)} status updated to ${status}`,
