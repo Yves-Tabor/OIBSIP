@@ -164,18 +164,16 @@ const PizzaBuilderPage = () => {
               }
             })
             .catch((err) => {
-              if (err.response?.status === 202) {
-                const transactionId = data?.data?.transaction_id || data?.transaction_id || savedBuild.transactionId;
-                const txRef = savedBuild.txRef;
-                if (transactionId && txRef) {
-                  void pollForOrder(transactionId, txRef);
-                  return;
-                }
+              console.error('Payment verification error:', err);
+              // Even if verification fails, try to poll for the order
+              // The webhook might have already created it
+              if (transactionId && txRef) {
+                void pollForOrder(transactionId, txRef);
+              } else {
+                setCheckoutLoading(false);
+                setCheckoutSuccess(false);
+                setErrorMessage(err.response?.data?.message || 'Payment verification failed. Please contact customer support.');
               }
-
-              setCheckoutLoading(false);
-              setCheckoutSuccess(false);
-              setErrorMessage(err.response?.data?.message || 'Payment verification failed. Please contact customer support.');
             });
         } catch (e) {
           setCheckoutLoading(false);
