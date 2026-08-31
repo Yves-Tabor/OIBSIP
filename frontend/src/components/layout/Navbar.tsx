@@ -52,6 +52,7 @@ const Navbar = () => {
     setIsUserOpen(false);
   };
 
+  // Handle notification click to navigate to linked page
   const handleNotificationClick = (notification: Notification) => {
     if (notification.link) {
       navigate(notification.link);
