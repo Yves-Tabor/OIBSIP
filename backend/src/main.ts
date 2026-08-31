@@ -20,7 +20,8 @@ const io = new SocketIOServer(httpServer, {
   cors: {
     origin: [
       'http://localhost:5173',
-      'https://dailypizza-seven.vercel.app'
+      'https://dailypizza-seven.vercel.app',
+      'https://dailypizza.onrender.com'
     ],
     credentials: true,
   },
@@ -30,7 +31,8 @@ const io = new SocketIOServer(httpServer, {
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://dailypizza-seven.vercel.app'
+    'https://dailypizza-seven.vercel.app',
+    'https://dailypizza.onrender.com'
   ],
   credentials: true,
 }));
