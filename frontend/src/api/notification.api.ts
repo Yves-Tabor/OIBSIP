@@ -4,6 +4,7 @@ export interface Notification {
   _id: string;
   message: string;
   type: 'order-status' | 'inventory' | 'order';
+  link?: string;
   read: boolean;
   createdAt: string;
 }
