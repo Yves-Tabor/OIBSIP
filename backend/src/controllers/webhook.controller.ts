@@ -93,6 +93,7 @@ export const handlePaddleWebhook = async (req: Request, res: Response): Promise<
         user: userId,
         message: `Your order #${order._id.toString().slice(-6)} has been received successfully!`,
         type: 'order',
+        link: `/orders/${order._id}`,
       });
       emitNotification(userId, userNotification);
 
@@ -103,6 +104,7 @@ export const handlePaddleWebhook = async (req: Request, res: Response): Promise<
           user: admin._id,
           message: `New order #${order._id.toString().slice(-6)} from ${user?.name || 'Customer'}`,
           type: 'order',
+          link: '/admin/orders',
         });
         emitNotification(admin._id.toString(), adminNotification);
       }
