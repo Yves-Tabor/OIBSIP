@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu as HamburgerIcon, X, User as UserIcon, LogOut, Shield, Mail, CheckCircle, Bell } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../hooks/useAuth';
 import { logout } from '../../features/auth/authSlice';
@@ -11,6 +11,7 @@ const Navbar = () => {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserOpen, setIsUserOpen] = useState(false);
@@ -49,6 +50,13 @@ const Navbar = () => {
   const handleLogout = () => {
     dispatch(logout());
     setIsUserOpen(false);
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (notification.link) {
+      navigate(notification.link);
+      setIsNotificationsOpen(false);
+    }
   };
 
   return (
@@ -242,7 +250,11 @@ const Navbar = () => {
           </div>
           <div className="max-h-80 space-y-2 overflow-y-auto">
             {notifications.length === 0 ? <p className="py-4 text-sm text-brand-text-muted">No notifications</p> : notifications.map((notification: Notification) => (
-              <div key={notification._id} className={`rounded p-2 text-sm ${notification.read ? 'bg-brand-surface text-brand-text-secondary' : 'bg-brand-orange-pale text-brand-choco'}`}>
+              <div
+                key={notification._id}
+                onClick={() => handleNotificationClick(notification)}
+                className={`rounded p-2 text-sm cursor-pointer transition-colors ${notification.read ? 'bg-brand-surface text-brand-text-secondary hover:bg-brand-surface-elevated' : 'bg-brand-orange-pale text-brand-choco hover:bg-brand-orange-pale/80'} ${notification.link ? 'hover:underline' : ''}`}
+              >
                 <p>{notification.message}</p><span className="text-xs opacity-70">{timeAgo(notification.createdAt)}</span>
               </div>
             ))}
