@@ -56,6 +56,7 @@ export const handlePaddleWebhook = async (req: Request, res: Response): Promise<
         return;
       }
 
+      // Create the order in database
       const order = await Order.create({
         user: userId,
         items,
@@ -66,6 +67,7 @@ export const handlePaddleWebhook = async (req: Request, res: Response): Promise<
         createdAt: new Date(),
       });
 
+      // Update inventory for each item in the order
       for (const item of items) {
         if (item.base) {
           await Inventory.updateOne({ item: item.base }, { $inc: { quantity: -1 } });
