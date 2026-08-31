@@ -36,6 +36,7 @@ export const handlePaddleWebhook = async (req: Request, res: Response): Promise<
     const event = JSON.parse(rawBody.toString('utf8'));
     const eventType = event?.eventType || event?.event_type;
 
+    // Handle transaction completed event
     if (eventType === 'transaction.completed') {
       const customData = event?.data?.customData || event?.data?.custom_data || {};
       const { txRef, userId, items, totalPrice } = customData;
