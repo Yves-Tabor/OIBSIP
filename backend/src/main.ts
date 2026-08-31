@@ -20,7 +20,7 @@ const io = new SocketIOServer(httpServer, {
   cors: {
     origin: [
       'http://localhost:5173',
-      'https://dailypizza.onrender.com'
+      'https://dailypizza.onrender.com',
     ],
     credentials: true,
   },
