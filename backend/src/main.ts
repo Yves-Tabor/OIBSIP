@@ -20,7 +20,6 @@ const io = new SocketIOServer(httpServer, {
   cors: {
     origin: [
       'http://localhost:5173',
-      'https://dailypizza-seven.vercel.app',
       'https://dailypizza.onrender.com'
     ],
     credentials: true,
@@ -31,7 +30,6 @@ const io = new SocketIOServer(httpServer, {
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://dailypizza-seven.vercel.app',
     'https://dailypizza.onrender.com'
   ],
   credentials: true,
@@ -83,8 +81,8 @@ const startServer = async (): Promise<void> => {
     await connectDB();
     
     httpServer.listen(env.PORT, () => {
-      console.log(`🚀 Server running on port ${env.PORT}`);
-      console.log(`📝 Environment: ${env.NODE_ENV}`);
+      console.log(`Server running on port ${env.PORT}`);
+      console.log(`Environment: ${env.NODE_ENV}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

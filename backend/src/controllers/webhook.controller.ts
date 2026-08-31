@@ -2,8 +2,10 @@ import { Request, Response } from 'express';
 import { Paddle } from '@paddle/paddle-node-sdk';
 import Order from '../models/Order';
 import Inventory from '../models/Inventory';
+import Notification from '../models/Notification';
 import { emitOrderUpdate } from '../sockets/order.socket';
 import { emitAdminNewOrder } from '../sockets/order.socket';
+import { emitNotification } from '../sockets/order.socket';
 import User from '../models/User';
 import { env } from '../config/env';
 
@@ -85,6 +87,26 @@ export const handlePaddleWebhook = async (req: Request, res: Response): Promise<
         items: order.items,
         status: order.status,
       });
+
+      // Create notification for the user
+      const userNotification = await Notification.create({
+        user: userId,
+        message: `Your order #${order._id.toString().slice(-6)} has been received successfully!`,
+        type: 'order',
+      });
+      emitNotification(userId, userNotification);
+
+      // Create notifications for all admins
+      const admins = await User.find({ role: 'admin' }, '_id');
+      for (const admin of admins) {
+        const adminNotification = await Notification.create({
+          user: admin._id,
+          message: `New order #${order._id.toString().slice(-6)} from ${user?.name || 'Customer'}`,
+          type: 'order',
+        });
+        emitNotification(admin._id.toString(), adminNotification);
+      }
+
       console.log('✅ Order saved:', order._id);
     }
 
