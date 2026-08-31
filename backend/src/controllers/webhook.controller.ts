@@ -85,6 +85,7 @@ export const handlePaddleWebhook = async (req: Request, res: Response): Promise<
         }
       }
 
+      // Emit real-time updates via socket
       emitOrderUpdate(userId, order);
       const user = await User.findById(userId, 'name');
       emitAdminNewOrder({
