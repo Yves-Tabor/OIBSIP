@@ -122,6 +122,7 @@ export const handlePaddleWebhook = async (req: Request, res: Response): Promise<
 
     res.status(200).json({ received: true });
   } catch (error) {
+    // Log error but always return 200 to prevent Paddle from retrying
     console.error('Webhook error:', error);
     res.status(200).json({ received: true });
   }
