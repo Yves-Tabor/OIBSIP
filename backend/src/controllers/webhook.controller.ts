@@ -48,6 +48,7 @@ export const handlePaddleWebhook = async (req: Request, res: Response): Promise<
         return;
       }
 
+      // Check for duplicate orders to prevent processing the same webhook twice
       const existingOrder = await Order.findOne({ paymentId }) || await Order.findOne({ txRef });
       if (existingOrder) {
         console.log('✅ Existing order found, skipping duplicate webhook');
