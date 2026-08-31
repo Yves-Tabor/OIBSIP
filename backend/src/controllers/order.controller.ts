@@ -48,8 +48,10 @@ export const verifyPayment = async (req: Request, res: Response): Promise<void> 
 
     const verification = await verifyPaddlePayment(transactionId);
 
-    if (verification.status !== 'completed') {
-      console.error('Payment verification failed: status not completed', verification);
+    // Accept 'completed' or 'paid' status - webhook will handle order creation
+    const validStatuses = ['completed', 'paid'];
+    if (!validStatuses.includes(verification.status)) {
+      console.error('Payment verification failed: invalid status', verification);
       res.status(400).json({ message: 'Payment was not completed' });
       return;
     }
@@ -132,6 +134,7 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
       user: order.user,
       message: `Your order #${order._id.toString().slice(-6)} status updated to ${status}`,
       type: 'order-status',
+      link: `/orders/${order._id}`,
     });
     emitNotification(order.user.toString(), notification);
 
