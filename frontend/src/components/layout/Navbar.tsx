@@ -254,7 +254,7 @@ const Navbar = () => {
               <div
                 key={notification._id}
                 onClick={() => handleNotificationClick(notification)}
-                className={`rounded p-2 text-sm cursor-pointer transition-colors ${notification.read ? 'bg-brand-surface text-brand-text-secondary hover:bg-brand-surface-elevated' : 'bg-brand-orange-pale text-brand-choco hover:bg-brand-orange-pale/80'} ${notification.link ? 'hover:underline' : ''}`}
+                className={`rounded p-2 text-sm cursor-pointer transition-colors ${notification.read ? 'bg-brand-surface text-brand-text-secondary hover:bg-brand-surface-elevated' : 'bg-brand-orange-pale text-brand-choco hover:bg-brand-orange-pale/80'}`}
               >
                 <p>{notification.message}</p><span className="text-xs opacity-70">{timeAgo(notification.createdAt)}</span>
               </div>
